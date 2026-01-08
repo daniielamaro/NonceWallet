@@ -1,0 +1,140 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button></ion-back-button>
+    </ion-buttons>
+    <ion-title>Enviar Bitcoin</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="container" *ngIf="wallet; else noWallet">
+    <div class="balance-info">
+      <p>Saldo disponível: <strong>{{ (balance || 0).toFixed(8) }} BTC</strong></p>
+      <p class="available-balance" *ngIf="getAvailableBalance() < balance">
+        Disponível para envio: <strong>{{ (getAvailableBalance() || 0).toFixed(8) }} BTC</strong>
+      </p>
+    </div>
+
+    <div class="form-section">
+      <ion-item>
+        <ion-label position="stacked">Endereço de Destino</ion-label>
+        <ion-input
+          [(ngModel)]="recipientAddress"
+          (ionInput)="onRecipientAddressChange()"
+          placeholder="Digite o endereço Bitcoin"
+          type="text">
+        </ion-input>
+      </ion-item>
+
+      <ion-item>
+        <ion-label position="stacked">Quantidade (BTC)</ion-label>
+        <ion-input
+          [(ngModel)]="amount"
+          (ionInput)="onAmountChange()"
+          placeholder="0.00000000"
+          type="number"
+          step="0.00000001">
+        </ion-input>
+        <ion-button fill="outline" slot="end" size="small" (click)="setMaxAmount()" color="primary">
+          <ion-icon name="arrow-up-outline" slot="start"></ion-icon>
+          MAX
+        </ion-button>
+      </ion-item>
+
+      <div class="amount-info" *ngIf="amount">
+        <p>Valor: ≈ R$ {{ (getAmountInBRL() || '0.00') }} BRL / ${{ (getAmountInUSD() || '0.00') }} USD</p>
+      </div>
+
+      <ion-item>
+        <ion-label position="stacked">Taxa de Rede (satoshis)</ion-label>
+        <ion-input
+          [(ngModel)]="networkFee"
+          (ionInput)="onFeeChange()"
+          placeholder="438"
+          type="number"
+          min="1"
+          step="1"
+          [readonly]="calculatingAdjustedFee">
+        </ion-input>
+        <ion-button
+          fill="clear"
+          slot="end"
+          size="small"
+          (click)="loadRecommendedFee()"
+          [disabled]="loadingFee || calculatingAdjustedFee"
+          title="Atualizar taxa recomendada">
+          <ion-icon name="refresh-outline" *ngIf="!loadingFee && !calculatingAdjustedFee"></ion-icon>
+          <ion-spinner name="crescent" *ngIf="loadingFee || calculatingAdjustedFee"></ion-spinner>
+        </ion-button>
+      </ion-item>
+      
+      <!-- Aviso quando a taxa foi ajustada -->
+      <div class="fee-adjustment-warning" *ngIf="isFeeAdjusted && feeAdjustmentReason">
+        <ion-icon name="information-circle-outline" color="warning"></ion-icon>
+        <div class="warning-content">
+          <p><strong>Taxa ajustada automaticamente</strong></p>
+          <p class="warning-details">{{ feeAdjustmentReason }}</p>
+        </div>
+      </div>
+      
+      <div class="fee-help-container">
+        <p class="fee-help-text" *ngIf="!loadingFee && !calculatingAdjustedFee && recommendedFeeRate && wallet && !isFeeAdjusted">
+          <strong>Taxa recomendada:</strong> {{ recommendedFeeRate }} sat/vB ({{ baseNetworkFee }} satoshis base).
+          <br>
+          <small>
+            <strong>{{ getAddressTypeLabel() }}:</strong> {{ getAddressTypeDescription() }}
+          </small>
+          <br>
+          <small>Ajuste conforme necessário.</small>
+        </p>
+        <p class="fee-help-text" *ngIf="calculatingAdjustedFee">
+          <ion-spinner name="crescent" style="width: 16px; height: 16px; display: inline-block;"></ion-spinner>
+          Calculando taxa ajustada...
+        </p>
+        <p class="fee-help-text" *ngIf="loadingFee">
+          Carregando taxa recomendada da rede baseada no tipo de endereço...
+        </p>
+        <p class="fee-help-text" *ngIf="!loadingFee && !calculatingAdjustedFee && !recommendedFeeRate">
+          Taxa atual: {{ networkFee }} satoshis. Clique no ícone de atualizar para buscar a taxa recomendada.
+        </p>
+      </div>
+
+      <div class="fee-info">
+        <p class="fee-label">Taxa de rede:</p>
+        <p class="fee-amount">{{ (getNetworkFeeInBTC() || 0).toFixed(8) }} BTC</p>
+        <p class="fee-fiat">≈ R$ {{ (getNetworkFeeInBRL() || '0.00') }} BRL / ${{ (getNetworkFeeInUSD() || '0.00') }} USD</p>
+      </div>
+
+      <div class="total-info" *ngIf="amount">
+        <p class="total-label">Total a ser enviado:</p>
+        <p class="total-amount">{{ (getTotalAmount() || 0).toFixed(8) }} BTC</p>
+        <p class="total-fiat">≈ R$ {{ (getTotalInBRL() || '0.00') }} BRL / ${{ (getTotalInUSD() || '0.00') }} USD</p>
+      </div>
+
+      <ion-button
+        expand="block"
+        color="success"
+        (click)="sendTransaction()"
+        [disabled]="loading || !wallet">
+        <ion-spinner *ngIf="loading" name="crescent"></ion-spinner>
+        <span *ngIf="!loading">Enviar Bitcoin</span>
+        <span *ngIf="loading">Enviando...</span>
+      </ion-button>
+    </div>
+
+    <div class="warning-box">
+      <ion-icon name="warning-outline"></ion-icon>
+      <p>Verifique cuidadosamente o endereço de destino antes de enviar.</p>
+    </div>
+  </div>
+  
+  <ng-template #noWallet>
+    <div class="container" style="padding: 20px; text-align: center;">
+      <ion-icon name="alert-circle-outline" style="font-size: 48px; color: #ea4335;"></ion-icon>
+      <h2>Carteira não encontrada</h2>
+      <p>A carteira não foi encontrada. Por favor, tente novamente.</p>
+    </div>
+  </ng-template>
+</ion-content>
+

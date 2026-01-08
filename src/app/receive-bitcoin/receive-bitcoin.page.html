@@ -1,0 +1,42 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button></ion-back-button>
+    </ion-buttons>
+    <ion-title>Receber Bitcoin</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" *ngIf="wallet">
+  <div class="container">
+    <div class="qr-section">
+      <h2>Escaneie o QR Code</h2>
+      <div class="qr-container">
+        <canvas #qrCanvas></canvas>
+      </div>
+    </div>
+
+    <div class="address-section">
+      <h3>Endereço da Carteira</h3>
+      <div class="address-box">
+        <p class="address-text">{{ wallet.address }}</p>
+        <ion-button fill="clear" size="small" (click)="copyAddress()">
+          <ion-icon name="copy-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <ion-button expand="block" (click)="copyAddress()">
+        <ion-icon name="copy-outline" slot="start"></ion-icon>
+        Copiar Endereço
+      </ion-button>
+    </div>
+
+    <div class="info-box">
+      <ion-icon name="information-circle-outline"></ion-icon>
+      <p>Envie Bitcoin para este endereço. As transações podem levar alguns minutos para serem confirmadas.</p>
+    </div>
+  </div>
+</ion-content>
+

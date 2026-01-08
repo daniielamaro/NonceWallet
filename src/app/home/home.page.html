@@ -1,0 +1,41 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>
+      Carteiras Bitcoin
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Carteiras Bitcoin</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <div class="container">
+    <ion-button expand="block" (click)="addWallet()" class="add-button">
+      <ion-icon name="add" slot="start"></ion-icon>
+      Adicionar Carteira
+    </ion-button>
+
+    <ion-list *ngIf="wallets.length > 0">
+      <ion-item button *ngFor="let wallet of wallets" (click)="openWallet(wallet)">
+        <ion-icon name="wallet" slot="start" color="primary"></ion-icon>
+        <ion-label>
+          <h2>{{ wallet.name }}</h2>
+          <p>{{ wallet.address.substring(0, 20) }}...</p>
+        </ion-label>
+        <ion-button fill="clear" slot="end" (click)="deleteWallet($event, wallet)">
+          <ion-icon name="trash" color="danger"></ion-icon>
+        </ion-button>
+      </ion-item>
+    </ion-list>
+
+    <div *ngIf="wallets.length === 0" class="empty-state">
+      <ion-icon name="wallet-outline" size="large"></ion-icon>
+      <p>Nenhuma carteira encontrada</p>
+      <p class="subtitle">Adicione uma nova carteira para começar</p>
+    </div>
+  </div>
+</ion-content>

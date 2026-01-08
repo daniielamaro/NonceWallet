@@ -1,0 +1,79 @@
+@import "@ionic/angular/css/core.css";
+
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+@import 'sweetalert2/dist/sweetalert2.min.css';
+.swal2-popup-custom {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.swal2-html-container-custom {
+  font-size: 14px;
+  line-height: 1.6;
+}
+body {
+  background-color: #ffffff !important;
+  color: #202124 !important;
+}
+
+ion-content {
+  --background: #ffffff;
+  --color: #202124;
+  --padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 60px);
+}
+
+ion-item {
+  --background: #ffffff;
+  --color: #202124;
+  --border-color: #dadce0;
+  --highlight-color-focused: #1a73e8;
+  --highlight-color-valid: #34a853;
+  --highlight-color-invalid: #ea4335;
+}
+
+ion-button {
+  --color: #ffffff;
+  font-weight: 500;
+}
+
+ion-toolbar {
+  --background: #ffffff;
+  --color: #202124;
+  --border-color: #dadce0;
+}
+
+ion-card {
+  --background: #ffffff;
+  --color: #202124;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #dadce0;
+}
+
+h1, h2, h3, h4, h5, h6, p, span, div {
+  color: #202124 !important;
+}
+
+ion-input, ion-textarea {
+  --color: #202124;
+  --placeholder-color: #5f6368;
+  --highlight-color-focused: #1a73e8;
+}
+
+ion-list {
+  background: #ffffff;
+}
+
+ion-list-header {
+  --background: #f8f9fa;
+  --color: #202124;
+  font-weight: 600;
+}

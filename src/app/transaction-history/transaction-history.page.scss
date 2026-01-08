@@ -1,0 +1,183 @@
+.container {
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px) + 60px);
+}
+
+.wallet-info {
+  margin-bottom: 24px;
+  text-align: center;
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #202124;
+    margin: 0 0 8px 0;
+  }
+
+  .address {
+    font-family: monospace;
+    font-size: 12px;
+    color: #5f6368;
+    word-break: break-all;
+    margin: 0;
+  }
+}
+
+.transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.transaction-item {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  transition: all 0.2s ease;
+
+  &.sent {
+    border-left: 4px solid #ea4335;
+  }
+
+  &.received {
+    border-left: 4px solid #34a853;
+  }
+
+  &.pending {
+    background: #fff3cd;
+    border-color: #fbbc04;
+  }
+
+  .transaction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+
+    .transaction-type {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      ion-icon {
+        font-size: 24px;
+      }
+
+      .type-label {
+        font-weight: 600;
+        font-size: 16px;
+        color: #202124;
+      }
+
+      .pending-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+      }
+    }
+
+    .transaction-amount {
+      text-align: right;
+
+      .amount-btc {
+        display: block;
+        font-size: 18px;
+        font-weight: 700;
+        color: #202124;
+        font-family: monospace;
+        margin-bottom: 4px;
+      }
+
+      .amount-fiat {
+        display: block;
+        font-size: 12px;
+        color: #5f6368;
+      }
+    }
+  }
+
+  .transaction-details {
+    margin: 12px 0;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 13px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+
+      .detail-label {
+        color: #5f6368;
+        font-weight: 500;
+      }
+
+      .detail-value {
+        color: #202124;
+        font-family: monospace;
+        font-size: 12px;
+
+        &.txid {
+          font-size: 11px;
+        }
+      }
+    }
+  }
+
+  .transaction-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+
+    ion-button {
+      --color: #1a73e8;
+      font-size: 12px;
+      margin: 0;
+    }
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 16px;
+
+  .empty-icon {
+    font-size: 64px;
+    color: #9aa0a6;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    font-size: 18px;
+    color: #202124;
+    margin: 0 0 8px 0;
+  }
+
+  p {
+    font-size: 14px;
+    color: #5f6368;
+    margin: 0;
+  }
+}
+
+.loading-state {
+  text-align: center;
+  padding: 48px 16px;
+
+  ion-spinner {
+    margin-bottom: 16px;
+  }
+
+  p {
+    color: #5f6368;
+    font-size: 14px;
+  }
+}
+

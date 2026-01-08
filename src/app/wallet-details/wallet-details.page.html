@@ -1,0 +1,118 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ wallet?.name || 'Detalhes' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="refresh()" [disabled]="loading">
+        <ion-icon 
+          [name]="loading ? 'refresh-outline' : 'refresh-outline'" 
+          [class.spinning]="loading"
+          slot="icon-only">
+        </ion-icon>
+      </ion-button>
+      <ion-button (click)="openMenu()">
+        <ion-icon name="menu-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" *ngIf="wallet">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content
+      pullingIcon="arrow-down"
+      pullingText="Arraste para atualizar"
+      refreshingSpinner="crescent"
+      refreshingText="Atualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="container">
+    <div class="balance-card">
+      <div class="balance-amount">
+        <ion-spinner *ngIf="loading" name="crescent"></ion-spinner>
+        <div *ngIf="!loading" class="balance-display">
+          <div class="balance-value-container">
+            <span class="balance-value">{{ getDisplayBalance() }}</span>
+            <span class="balance-unit-label">{{ getBalanceUnitLabel() }}</span>
+          </div>
+          <button
+            class="balance-unit-button"
+            (click)="toggleBalanceUnit()"
+            type="button">
+            <span class="balance-unit">{{ getBalanceUnitLabel() }}</span>
+            <ion-icon name="repeat-outline" class="unit-icon"></ion-icon>
+          </button>
+        </div>
+      </div>
+
+      <p class="balance-secondary" *ngIf="!loading && getSecondaryBalance()">
+        {{ getSecondaryBalance() }}
+      </p>
+    </div>
+
+    <div class="pending-section" *ngIf="pendingReceive > 0 || pendingSend > 0">
+      <h3>Transações Pendentes</h3>
+
+      <div class="pending-card pending-receive" *ngIf="pendingReceive > 0">
+        <div class="pending-header">
+          <ion-icon name="arrow-down-circle" color="success"></ion-icon>
+          <span>Pendente a Receber</span>
+        </div>
+        <div class="pending-amount">{{ pendingReceive.toFixed(8) }} BTC</div>
+        <div class="pending-fiat">
+          ≈ R$ {{ getPendingReceiveInBRL() }} BRL / ${{ getPendingReceiveInUSD() }} USD
+        </div>
+      </div>
+
+      <div class="pending-card pending-send" *ngIf="pendingSend > 0">
+        <div class="pending-header">
+          <ion-icon name="arrow-up-circle" color="warning"></ion-icon>
+          <span>Pendente a Enviar</span>
+        </div>
+        <div class="pending-amount">{{ pendingSend.toFixed(8) }} BTC</div>
+        <div class="pending-fiat">
+          ≈ R$ {{ getPendingSendInBRL() }} BRL / ${{ getPendingSendInUSD() }} USD
+        </div>
+      </div>
+
+      <div class="total-pending-card" *ngIf="pendingReceive > 0 || pendingSend > 0">
+        <div class="total-pending-label">Saldo Total (incluindo pendentes)</div>
+        <div class="total-pending-amount">{{ getTotalBalance().toFixed(8) }} BTC</div>
+        <div class="total-pending-fiat">
+          ≈ R$ {{ getTotalBalanceInBRL() }} BRL / ${{ getTotalBalanceInUSD() }} USD
+        </div>
+      </div>
+    </div>
+
+    <div class="address-section">
+      <h3>Endereço da Carteira</h3>
+      <div class="address-box">
+        <p class="address-text">{{ wallet.address }}</p>
+        <ion-button fill="clear" size="small" (click)="copyAddress()">
+          <ion-icon name="copy-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <div class="action-row">
+        <ion-button expand="block" color="primary" (click)="receiveBitcoin()">
+          <ion-icon name="arrow-down-circle" slot="start"></ion-icon>
+          Receber
+        </ion-button>
+        <ion-button expand="block" color="success" (click)="sendBitcoin()">
+          <ion-icon name="arrow-up-circle" slot="start"></ion-icon>
+          Enviar
+        </ion-button>
+      </div>
+      <ion-button expand="block" fill="outline" color="medium" (click)="viewHistory()">
+        <ion-icon name="receipt-outline" slot="start"></ion-icon>
+        Ver Histórico
+      </ion-button>
+    </div>
+  </div>
+</ion-content>
+

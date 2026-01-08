@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Nonce Wallet</string>
+    <string name="title_activity_main">Nonce Wallet</string>
+    <string name="package_name">br.com.danielamaro.nonce</string>
+    <string name="custom_url_scheme">br.com.danielamaro.nonce</string>
+</resources>
