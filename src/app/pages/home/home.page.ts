@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { Wallet } from '../services/wallet.service';
-import { StorageService } from '../services/storage.service';
+import { StorageService } from '../../services/storage.service';
+import { AlertService } from 'src/app/services/alert.service';
+import { Wallet } from 'src/app/domain/wallet';
 
 @Component({
   selector: 'app-home',
@@ -10,17 +11,23 @@ import { StorageService } from '../services/storage.service';
   standalone: false,
 })
 export class HomePage implements OnInit {
+
   wallets: Wallet[] = [];
   private hasNavigated = false;
 
   constructor(
     private storageService: StorageService,
-    private router: Router
+    private router: Router,
+    private alertService: AlertService
   ) {}
 
   ngOnInit() {
     this.loadWallets();
     this.checkAutoNavigate();
+  }
+
+  loadWallets() {
+    this.wallets = this.storageService.getWallets();
   }
 
   ionViewWillEnter() {
@@ -30,10 +37,6 @@ export class HomePage implements OnInit {
     }
   }
 
-  loadWallets() {
-    this.wallets = this.storageService.getWallets();
-  }
-
   checkAutoNavigate() {
     if (this.wallets.length === 1 && !this.hasNavigated) {
       this.hasNavigated = true;
@@ -41,17 +44,10 @@ export class HomePage implements OnInit {
     }
   }
 
-  addWallet() {
-    this.router.navigate(['/create-wallet']);
-  }
-
-  openWallet(wallet: Wallet) {
-    this.router.navigate(['/wallet-details', wallet.id]);
-  }
-
-  deleteWallet(event: Event, wallet: Wallet) {
+  async deleteWallet(event: Event, wallet: Wallet) {
     event.stopPropagation();
-    if (confirm(`Tem certeza que deseja excluir a carteira "${wallet.name}"?`)) {
+    let awnser = await this.alertService.question(`Tem certeza que deseja excluir a carteira "${wallet.name}"?`);
+    if (awnser.isConfirmed) {
       this.storageService.deleteWallet(wallet.id);
       this.loadWallets();
     }

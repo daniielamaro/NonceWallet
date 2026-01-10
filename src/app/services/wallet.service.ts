@@ -4,18 +4,7 @@ import { initEccLib } from 'bitcoinjs-lib';
 import { ECPairFactory } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 import { Buffer } from 'buffer';
-
-export type AddressType = 'segwit' | 'taproot';
-
-export interface Wallet {
-  id: string;
-  name: string;
-  address: string;
-  privateKey: string;
-  seed: string[];
-  addressType: AddressType;
-  createdAt: number;
-}
+import { AddressType, Wallet } from '../domain/wallet';
 
 @Injectable({
   providedIn: 'root'
@@ -301,7 +290,7 @@ export class WalletService {
     return seed;
   }
 
-  async generateWalletFromSeed(seed: string[], name: string, addressType: AddressType = 'segwit'): Promise<Wallet> {
+  async generateWalletFromSeed(seed: string[], name: string, addressType: AddressType = 'taproot'): Promise<Wallet> {
     try {
       const seedString = seed.join(' ');
       const encoder = new TextEncoder();
@@ -338,7 +327,7 @@ export class WalletService {
     }
   }
 
-  async generateWalletFromPrivateKey(privateKey: string, name: string, addressType: AddressType = 'segwit'): Promise<Wallet> {
+  async generateWalletFromPrivateKey(privateKey: string, name: string, addressType: AddressType = 'taproot'): Promise<Wallet> {
     let normalizedKey = privateKey.trim().replace(/^0x/i, '').replace(/\s/g, '');
 
     if (normalizedKey.length < 64) {
@@ -360,7 +349,7 @@ export class WalletService {
     };
   }
 
-  private async generateAddressFromPrivateKey(privateKey: string, addressType: AddressType = 'segwit'): Promise<string> {
+  private async generateAddressFromPrivateKey(privateKey: string, addressType: AddressType = 'taproot'): Promise<string> {
     try {
       const privateKeyBuffer = Buffer.from(privateKey, 'hex');
 
@@ -414,48 +403,6 @@ export class WalletService {
       console.error('Erro em generateAddressFromPrivateKey:', error);
       throw new Error(`Erro ao gerar endereço: ${error.message || error}`);
     }
-  }
-
-  private base58Encode(bytes: number[]): string {
-    const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-
-    let num: number[] = [...bytes];
-    const result: number[] = [];
-
-    let zeroCount = 0;
-    while (zeroCount < bytes.length && bytes[zeroCount] === 0) {
-      zeroCount++;
-    }
-
-    while (num.length > 0) {
-      let remainder = 0;
-      const newNum: number[] = [];
-
-      for (let i = 0; i < num.length; i++) {
-        const value = remainder * 256 + num[i];
-        const quotient = Math.floor(value / 58);
-        remainder = value % 58;
-
-        if (newNum.length > 0 || quotient > 0) {
-          newNum.push(quotient);
-        }
-      }
-
-      result.push(remainder);
-      num = newNum;
-    }
-
-    let resultStr = '';
-
-    for (let i = 0; i < zeroCount; i++) {
-      resultStr += '1';
-    }
-
-    for (let i = result.length - 1; i >= 0; i--) {
-      resultStr += alphabet[result[i]];
-    }
-
-    return resultStr;
   }
 
   private generateId(): string {

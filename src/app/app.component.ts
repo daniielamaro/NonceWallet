@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Platform } from '@ionic/angular';
+import { AlertService } from './services/alert.service';
 
 @Component({
   selector: 'app-root',
@@ -8,12 +9,7 @@ import { Platform } from '@ionic/angular';
   standalone: false,
 })
 export class AppComponent implements OnInit {
-  constructor(private platform: Platform) {}
+  constructor() {}
 
-  ngOnInit() {
-    this.platform.ready().then(() => {
-      document.body.classList.remove('dark');
-      document.documentElement.style.colorScheme = 'light';
-    });
-  }
+  ngOnInit() {}
 }

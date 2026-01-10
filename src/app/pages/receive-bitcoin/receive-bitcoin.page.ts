@@ -1,8 +1,8 @@
 import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Wallet } from '../services/wallet.service';
-import { StorageService } from '../services/storage.service';
-import { AlertService } from '../services/alert.service';
+import { StorageService } from '../../services/storage.service';
+import { AlertService } from '../../services/alert.service';
+import { Wallet } from '../../domain/wallet';
 
 @Component({
   selector: 'app-receive-bitcoin',
@@ -11,6 +11,7 @@ import { AlertService } from '../services/alert.service';
   standalone: false,
 })
 export class ReceiveBitcoinPage implements OnInit, AfterViewInit {
+  
   @ViewChild('qrCanvas', { static: false }) qrCanvas!: ElementRef<HTMLCanvasElement>;
   wallet: Wallet | null = null;
   qrCodeData: string = '';
@@ -51,32 +52,6 @@ export class ReceiveBitcoinPage implements OnInit, AfterViewInit {
         this.alertService.toastError('Erro ao copiar endereço');
       }
     }
-  }
-
-  canShare(): boolean {
-    return 'share' in navigator;
-  }
-
-  shareAddress() {
-    if (this.wallet && this.canShare()) {
-      (navigator as any).share({
-        title: 'Meu endereço Bitcoin',
-        text: this.wallet!.address,
-      });
-    }
-  }
-
-  generatePaymentRequest(amount?: number) {
-    if (!this.wallet) return;
-    
-    let paymentUrl = `bitcoin:${this.wallet.address}`;
-    if (amount) {
-      paymentUrl += `?amount=${amount}`;
-    }
-    
-    this.qrCodeData = paymentUrl;
-    this.generateQRCode();
-    return paymentUrl;
   }
 
   private generateQRCode() {

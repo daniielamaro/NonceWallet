@@ -1,12 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ActionSheetController, RefresherCustomEvent } from '@ionic/angular';
-import { Wallet } from '../services/wallet.service';
-import { StorageService } from '../services/storage.service';
-import { BitcoinApiService } from '../services/bitcoin-api.service';
-import { AlertService } from '../services/alert.service';
+import { StorageService } from '../../services/storage.service';
+import { BitcoinApiService } from '../../services/bitcoin-api.service';
+import { AlertService } from '../../services/alert.service';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { Wallet } from 'src/app/domain/wallet';
 
 @Component({
   selector: 'app-wallet-details',
@@ -15,6 +15,7 @@ import { catchError } from 'rxjs/operators';
   standalone: false,
 })
 export class WalletDetailsPage implements OnInit {
+  
   wallet: Wallet | null = null;
   balance: number = 0;
   pendingReceive: number = 0;
@@ -55,103 +56,44 @@ export class WalletDetailsPage implements OnInit {
     }
   }
 
-  loadBalance() {
+  async loadBalance() {
     if (!this.wallet) return;
 
     this.loading = true;
+    this.balance = await this.bitcoinApi.getBalance(this.wallet.address);
+    this.loading = false;
 
-    this.bitcoinApi.getBalance(this.wallet.address).subscribe(
-      balance => {
-        this.balance = balance;
-        this.loading = false;
-      },
-      error => {
-        console.error('Erro ao carregar saldo:', error);
-        this.loading = false;
-      }
-    );
+    this.pendingSend = await this.bitcoinApi.getPendingSent(this.wallet.address);
 
-    this.bitcoinApi.getPendingSent(this.wallet.address).subscribe(
-      pending => {
-        this.pendingSend = pending;
-      },
-      error => {
-        console.error('Erro ao carregar saldo pendente a enviar:', error);
-        this.pendingSend = 0;
-      }
-    );
+    this.pendingReceive = await this.bitcoinApi.getPendingBalance(this.wallet.address);
 
-    this.bitcoinApi.getPendingBalance(this.wallet.address).subscribe(
-      pending => {
-        this.pendingReceive = pending;
-      },
-      error => {
-        console.error('Erro ao carregar saldo pendente a receber:', error);
-      }
-    );
+    this.btcPriceBRL = await this.bitcoinApi.getBitcoinPriceBRL();
 
-    this.bitcoinApi.getBitcoinPriceBRL().subscribe(priceBRL => {
-      this.btcPriceBRL = priceBRL;
-    });
-
-    this.bitcoinApi.getBitcoinPriceUSD().subscribe(priceUSD => {
-      this.btcPriceUSD = priceUSD;
-    });
+    this.btcPriceUSD = await this.bitcoinApi.getBitcoinPriceUSD();
   }
 
-  doRefresh(event: RefresherCustomEvent) {
+  async doRefresh(event: RefresherCustomEvent) {
     if (!this.wallet) {
       event.target.complete();
       return;
     }
 
-    forkJoin({
-      balance: this.bitcoinApi.getBalance(this.wallet.address).pipe(
-        catchError(error => {
-          console.error('Erro ao carregar saldo:', error);
-          return of(this.balance); // Manter valor atual em caso de erro
-        })
-      ),
-      pendingSend: this.bitcoinApi.getPendingSent(this.wallet.address).pipe(
-        catchError(error => {
-          console.error('Erro ao carregar saldo pendente a enviar:', error);
-          return of(0);
-        })
-      ),
-      pendingReceive: this.bitcoinApi.getPendingBalance(this.wallet.address).pipe(
-        catchError(error => {
-          console.error('Erro ao carregar saldo pendente a receber:', error);
-          return of(0);
-        })
-      ),
-      priceBRL: this.bitcoinApi.getBitcoinPriceBRL().pipe(
-        catchError(error => {
-          console.error('Erro ao carregar preço BRL:', error);
-          return of(this.btcPriceBRL || this.bitcoinApi.getCurrentPriceBRL());
-        })
-      ),
-      priceUSD: this.bitcoinApi.getBitcoinPriceUSD().pipe(
-        catchError(error => {
-          console.error('Erro ao carregar preço USD:', error);
-          return of(this.btcPriceUSD || this.bitcoinApi.getCurrentPriceUSD());
-        })
-      )
-    }).subscribe({
-      next: (data) => {
-        this.balance = data.balance;
-        this.pendingSend = data.pendingSend;
-        this.pendingReceive = data.pendingReceive;
-        this.btcPriceBRL = data.priceBRL;
-        this.btcPriceUSD = data.priceUSD;
-        this.loading = false;
-        event.target.complete();
-      },
-      error: (error) => {
-        console.error('Erro ao atualizar dados:', error);
-        this.loading = false;
-        event.target.complete();
-      }
-    });
+    let [balance, pendingSend, pendingReceive, priceBRL, priceUSD] = await Promise.all([
+      this.bitcoinApi.getBalance(this.wallet.address),
+      this.bitcoinApi.getPendingSent(this.wallet.address),
+      this.bitcoinApi.getPendingBalance(this.wallet.address),
+      this.bitcoinApi.getBitcoinPriceBRL(),
+      this.bitcoinApi.getBitcoinPriceUSD()
+    ]);
+    
+    this.balance = balance;
+    this.pendingSend = pendingSend;
+    this.pendingReceive = pendingReceive;
+    this.btcPriceBRL = priceBRL;
+    this.btcPriceUSD = priceUSD;
+
+    this.loading = false;
+    event.target.complete();
   }
 
 

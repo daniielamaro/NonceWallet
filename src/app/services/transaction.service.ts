@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BitcoinApiService } from './bitcoin-api.service';
-import { Observable, forkJoin, of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import * as bitcoin from 'bitcoinjs-lib';
 import { initEccLib } from 'bitcoinjs-lib';
@@ -66,21 +66,15 @@ export class TransactionService {
     });
   }
 
-  getUTXOs(address: string, confirmedOnly: boolean = true): Observable<UTXO[]> {
-    return this.bitcoinApi.getUTXOs(address, confirmedOnly).pipe(
-      map((utxos: any[]) => {
-        return utxos.map(utxo => ({
-          txid: utxo.txid,
-          vout: utxo.vout,
-          value: utxo.value,
-          status: utxo.status || { confirmed: false }
-        }));
-      }),
-      catchError(error => {
-        console.error('Erro ao buscar UTXOs:', error);
-        return of([]);
-      })
-    );
+  async getUTXOs(address: string, confirmedOnly: boolean = true): Promise<UTXO[]> {
+    let utxos = await this.bitcoinApi.getUTXOs(address, confirmedOnly)
+    
+    return utxos.map(utxo => ({
+      txid: utxo.txid,
+      vout: utxo.vout,
+      value: utxo.value,
+      status: utxo.status || { confirmed: false }
+    }));
   }
 
   async buildTransaction(

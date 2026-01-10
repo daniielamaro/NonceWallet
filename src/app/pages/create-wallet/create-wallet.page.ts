@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-import { WalletService } from '../services/wallet.service';
-import { StorageService } from '../services/storage.service';
-import { AlertService } from '../services/alert.service';
+import { WalletService } from '../../services/wallet.service';
+import { StorageService } from '../../services/storage.service';
+import { AlertService } from '../../services/alert.service';
 
 @Component({
   selector: 'app-create-wallet',
@@ -18,7 +18,7 @@ export class CreateWalletPage {
   generatedSeed: string[] = [];
   showSeed: boolean = false;
   seedInputText: string = '';
-  addressType: 'segwit' | 'taproot' = 'segwit';
+  addressType: 'segwit' | 'taproot' = 'taproot';
   loading: boolean = false;
 
   constructor(
@@ -66,7 +66,7 @@ export class CreateWalletPage {
             return;
           }
           if (!this.walletService.validateSeed(seedToUse)) {
-            await this.alertService.toastError('Verifique se todas as palavras estão corretas e pertencem à lista BIP39.');
+            await this.alertService.error('Verifique se todas as palavras estão corretas e pertencem à lista BIP39.');
             this.loading = false;
             return;
           }
@@ -88,23 +88,16 @@ export class CreateWalletPage {
       try {
         wallet = await this.walletService.generateWalletFromSeed(seedToUse, this.walletName, this.addressType);
       } catch (genError: any) {
-        console.error('Erro ao gerar carteira:', genError);
         throw new Error(`Erro ao gerar carteira: ${genError.message || 'Falha na geração da carteira. Verifique se o seed está correto.'}`);
       }
 
       if (!wallet || !wallet.address || !wallet.privateKey) {
-        console.error('Carteira incompleta:', {
-          hasWallet: !!wallet,
-          hasAddress: !!wallet?.address,
-          hasPrivateKey: !!wallet?.privateKey
-        });
         throw new Error('Carteira gerada está incompleta. Tente novamente.');
       }
 
       try {
         this.storageService.saveWallet(wallet);
       } catch (saveError: any) {
-        console.error('Erro ao salvar carteira:', saveError);
         throw new Error(`Erro ao salvar carteira: ${saveError.message || 'Falha ao salvar no armazenamento local.'}`);
       }
 
@@ -115,28 +108,18 @@ export class CreateWalletPage {
 
       this.loading = false;
 
-      this.router.navigate(['/wallet-details', wallet.id])
-        .catch((navError: any) => {
-          console.error('Erro na navegação:', navError);
-          setTimeout(() => {
-            this.router.navigate(['/wallet-details', wallet.id]).catch(err => {
-              console.error('Erro ao tentar navegar novamente:', err);
-            });
-          }, 500);
-        });
-    } catch (error: any) {
+      this.router.navigate(['/wallet-details', wallet.id]);
+    } 
+    catch (error: any) {
       let errorMessage = 'Ocorreu um erro ao criar a carteira.';
+      
       if (error.message) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
       }
 
-      try {
-        this.alertService.toastError(errorMessage)
-          .catch(() => {});
-      } catch (e: any) {
-      }
+      this.alertService.error(errorMessage);
     } finally {
       this.loading = false;
     }

@@ -1,6 +1,6 @@
 import { NgModule, ErrorHandler } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HttpClientModule } from '@angular/common/http';
+import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
 import { RouteReuseStrategy } from '@angular/router';
 
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
@@ -18,13 +18,13 @@ class GlobalErrorHandler implements ErrorHandler {
   declarations: [AppComponent],
   imports: [
     BrowserModule, 
-    HttpClientModule, 
     IonicModule.forRoot({
       mode: 'md',
     }), 
     AppRoutingModule
   ],
   providers: [
+    provideHttpClient(withInterceptorsFromDi()),
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     { provide: ErrorHandler, useClass: GlobalErrorHandler }
   ],

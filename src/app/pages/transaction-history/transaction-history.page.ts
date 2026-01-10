@@ -1,22 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Wallet } from '../services/wallet.service';
-import { StorageService } from '../services/storage.service';
-import { BitcoinApiService } from '../services/bitcoin-api.service';
-import { AlertService } from '../services/alert.service';
-
-export interface Transaction {
-  txid: string;
-  type: 'sent' | 'received' | 'self';
-  amount: number;
-  amountSatoshis: number;
-  confirmed: boolean;
-  blockHeight?: number;
-  blockTime: number;
-  fee: number;
-  inputs: number;
-  outputs: number;
-}
+import { StorageService } from '../../services/storage.service';
+import { BitcoinApiService } from '../../services/bitcoin-api.service';
+import { AlertService } from '../../services/alert.service';
+import { Wallet } from 'src/app/domain/wallet';
+import { Transaction } from 'src/app/domain/transaction';
 
 @Component({
   selector: 'app-transaction-history',
@@ -61,28 +49,16 @@ export class TransactionHistoryPage implements OnInit {
     }
   }
 
-  loadTransactionHistory() {
+  async loadTransactionHistory() {
     if (!this.wallet) return;
 
     this.loading = true;
-    this.bitcoinApi.getTransactionHistory(this.wallet.address, 50).subscribe(
-      transactions => {
-        this.transactions = transactions;
-        this.loading = false;
-      },
-      error => {
-        console.error('Erro ao carregar histórico:', error);
-        this.loading = false;
-      }
-    );
+    this.transactions = await this.bitcoinApi.getTransactionHistory(this.wallet.address, 50);
+    this.loading = false;
 
-    this.bitcoinApi.getBitcoinPriceBRL().subscribe(priceBRL => {
-      this.btcPriceBRL = priceBRL;
-    });
+    this.btcPriceBRL = await this.bitcoinApi.getBitcoinPriceBRL();
 
-    this.bitcoinApi.getBitcoinPriceUSD().subscribe(priceUSD => {
-      this.btcPriceUSD = priceUSD;
-    });
+    this.btcPriceUSD = await this.bitcoinApi.getBitcoinPriceUSD();
   }
 
   formatDate(timestamp: number): string {

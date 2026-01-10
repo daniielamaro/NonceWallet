@@ -14,15 +14,15 @@
   </ion-header>
 
   <div class="container">
-    <ion-button expand="block" (click)="addWallet()" class="add-button">
+    <ion-button expand="block" routerLink="/create-wallet" class="add-button">
       <ion-icon name="add" slot="start"></ion-icon>
       Adicionar Carteira
     </ion-button>
 
     <ion-list *ngIf="wallets.length > 0">
-      <ion-item button *ngFor="let wallet of wallets" (click)="openWallet(wallet)">
-        <ion-icon name="wallet" slot="start" color="primary"></ion-icon>
-        <ion-label>
+      <ion-item button *ngFor="let wallet of wallets">
+        <ion-icon name="wallet" slot="start" color="primary" [routerLink]="['/wallet-details', wallet.id]"></ion-icon>
+        <ion-label [routerLink]="['/wallet-details', wallet.id]">
           <h2>{{ wallet.name }}</h2>
           <p>{{ wallet.address.substring(0, 20) }}...</p>
         </ion-label>

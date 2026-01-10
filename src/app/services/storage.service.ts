@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Wallet } from './wallet.service';
+import { Wallet } from '../domain/wallet';
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +22,6 @@ export class StorageService {
         return wallet;
       });
     } catch (error) {
-      console.error('Erro ao ler carteiras:', error);
       return [];
     }
   }
