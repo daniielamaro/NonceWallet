@@ -6,7 +6,11 @@ import { firstValueFrom } from 'rxjs';
   providedIn: 'root'
 })
 export class BitcoinApiService {
-  private readonly API_BASE = 'https://blockstream.info/api';
+  private readonly API_BASES = [
+    'https://mempool.space/api',
+    'https://blockstream.info/api'
+  ];
+  private readonly API_BASE = this.API_BASES[0];
   private btcPriceBRL: number = 0;
   private btcPriceUSD: number = 0;
   private lastPriceUpdate: number = 0;
@@ -46,18 +50,58 @@ export class BitcoinApiService {
   }
 
   async getUTXOs(address: string, confirmedOnly: boolean = true): Promise<any[]> {
-    try{
+    try {
       let utxos = (<any[]>(await firstValueFrom(this.http.get<any[]>(`${this.API_BASE}/address/${address}/utxo`))));
 
       if (confirmedOnly) {
-        return utxos.filter(utxo => {
+        utxos = utxos.filter(utxo => {
           return utxo.status && utxo.status.confirmed === true;
         });
       }
-      return utxos;
+      
+      const validUtxos = utxos.filter(utxo => {
+        return utxo && 
+               utxo.txid && 
+               typeof utxo.vout === 'number' && 
+               typeof utxo.value === 'number' &&
+               utxo.value > 0;
+      });
+
+      if (validUtxos.length !== utxos.length) {
+        console.warn(`Alguns UTXOs foram filtrados por validação: ${utxos.length - validUtxos.length} inválidos`);
+      }
+
+      return validUtxos;
     }
     catch(error: any){
-      console.error('Erro ao buscar UTXOs:', error);
+      console.error('Erro ao buscar UTXOs da API principal:', error);
+      
+      for (const apiBase of this.API_BASES.slice(1)) {
+        try {
+          let utxos = (<any[]>(await firstValueFrom(this.http.get<any[]>(`${apiBase}/address/${address}/utxo`))));
+          
+          if (confirmedOnly) {
+            utxos = utxos.filter(utxo => {
+              return utxo.status && utxo.status.confirmed === true;
+            });
+          }
+          
+          const validUtxos = utxos.filter(utxo => {
+            return utxo && 
+                   utxo.txid && 
+                   typeof utxo.vout === 'number' && 
+                   typeof utxo.value === 'number' &&
+                   utxo.value > 0;
+          });
+          
+          console.log(`UTXOs recuperados via fallback (${apiBase})`);
+          return validUtxos;
+        } catch (fallbackError) {
+          console.warn(`Fallback ${apiBase} também falhou:`, fallbackError);
+          continue;
+        }
+      }
+      
       return [];
     }
   }
@@ -73,31 +117,61 @@ export class BitcoinApiService {
   }
 
   async broadcastTransaction(txHex: string): Promise<string> {
-    try{
-      let response = (<any>(await firstValueFrom(this.http.post(`${this.API_BASE}/tx`, txHex, {
-        headers: { 'Content-Type': 'text/plain' },
-        responseType: 'text'
-      }))));
+    let lastError: any = null;
+    
+    for (const apiBase of this.API_BASES) {
+      try {
+        let response = (<any>(await firstValueFrom(this.http.post(`${apiBase}/tx`, txHex, {
+          headers: { 'Content-Type': 'text/plain' },
+          responseType: 'text'
+        }))));
 
-      if (typeof response === 'string') {
-        return response;
-      } else if (response && response.txid) {
-        return response.txid;
+        let txId: string;
+        if (typeof response === 'string') {
+          txId = response;
+        } else if (response && response.txid) {
+          txId = response.txid;
+        } else {
+          txId = response;
+        }
+
+        await this.verifyTransactionInMempool(txId, apiBase);
+        
+        return txId;
       }
-
-      return response;
+      catch(error: any){
+        console.warn(`Erro ao transmitir via ${apiBase}:`, error);
+        lastError = error;
+        continue;
+      }
     }
-    catch(error: any){
-      console.error('Erro ao enviar transação:', error);
-      let errorMessage = 'Erro ao transmitir transação';
-      if (error.error) {
-        if (typeof error.error === 'string') {
-          errorMessage = error.error;
-        } else if (error.error.error) {
-          errorMessage = error.error.error;
+
+    console.error('Erro ao enviar transação em todas as APIs:', lastError);
+    let errorMessage = 'Erro ao transmitir transação em todas as APIs disponíveis';
+    if (lastError?.error) {
+      if (typeof lastError.error === 'string') {
+        errorMessage = lastError.error;
+      } else if (lastError.error.error) {
+        errorMessage = lastError.error.error;
+      }
+    }
+    throw new Error(errorMessage);
+  }
+
+  private async verifyTransactionInMempool(txId: string, apiBase: string, maxAttempts: number = 3): Promise<void> {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); // Aguarda 1s, 2s, 3s
+        
+        const tx = await firstValueFrom(this.http.get(`${apiBase}/tx/${txId}`));
+        if (tx) {
+          return;
+        }
+      } catch (error) {
+        if (attempt === maxAttempts - 1) {
+          console.warn(`Transação ${txId} não apareceu no mempool após ${maxAttempts} tentativas. Pode ter sido censurada ou há problema de rede.`);
         }
       }
-      throw new Error(errorMessage);
     }
   }
 

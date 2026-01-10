@@ -163,35 +163,54 @@ export class TransactionService {
 
   private async getUTXOsWithScripts(utxos: UTXO[]): Promise<any[]> {
     const utxosWithScripts = [];
+    const API_BASES = [
+      'https://mempool.space/api', 
+      'https://blockstream.info/api' 
+    ];
 
     for (const utxo of utxos) {
-      try {
-        const txResponse = await fetch(`https://blockstream.info/api/tx/${utxo.txid}`);
-        if (txResponse.ok) {
-          const tx = await txResponse.json();
-          if (tx.vout && tx.vout[utxo.vout]) {
-            const txHexResponse = await fetch(`https://blockstream.info/api/tx/${utxo.txid}/hex`);
-            let txHex = null;
-            if (txHexResponse.ok) {
-              txHex = await txHexResponse.text();
-            }
+      let scriptPubKey: string | null = null;
+      let scriptPubKeyAsm: string | null = null;
+      let txHex: string | null = null;
+      let found = false;
 
-            utxosWithScripts.push({
-              ...utxo,
-              scriptPubKey: tx.vout[utxo.vout].scriptpubkey,
-              scriptPubKeyAsm: tx.vout[utxo.vout].scriptpubkey_asm,
-              txHex: txHex
-            });
-          } else {
-            utxosWithScripts.push(utxo);
+      for (const apiBase of API_BASES) {
+        try {
+          const txResponse = await fetch(`${apiBase}/tx/${utxo.txid}`);
+          if (txResponse.ok) {
+            const tx = await txResponse.json();
+            if (tx.vout && tx.vout[utxo.vout]) {
+              scriptPubKey = tx.vout[utxo.vout].scriptpubkey;
+              scriptPubKeyAsm = tx.vout[utxo.vout].scriptpubkey_asm;
+              
+              try {
+                const txHexResponse = await fetch(`${apiBase}/tx/${utxo.txid}/hex`);
+                if (txHexResponse.ok) {
+                  txHex = await txHexResponse.text();
+                }
+              } catch (hexError) {
+
+              }
+
+              found = true;
+              break;
+            }
           }
-        } else {
-          utxosWithScripts.push(utxo);
+        } catch (error) {
+          continue;
         }
-      } catch (error) {
-        console.error(`Erro ao buscar scriptPubKey para UTXO ${utxo.txid}:`, error);
-        utxosWithScripts.push(utxo);
       }
+
+      if (!found) {
+        console.warn(`Não foi possível buscar scriptPubKey para UTXO ${utxo.txid}:${utxo.vout} de nenhuma API`);
+      }
+
+      utxosWithScripts.push({
+        ...utxo,
+        scriptPubKey: scriptPubKey,
+        scriptPubKeyAsm: scriptPubKeyAsm,
+        txHex: txHex
+      });
     }
 
     return utxosWithScripts;
