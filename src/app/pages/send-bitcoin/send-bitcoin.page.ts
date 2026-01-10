@@ -29,6 +29,7 @@ export class SendBitcoinPage implements OnInit {
   feeAdjustmentReason: string = '';
   calculatingAdjustedFee: boolean = false;
   isFeeManuallyChanged: boolean = false;
+  isMaxChecked: boolean = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -299,6 +300,11 @@ export class SendBitcoinPage implements OnInit {
     this.isFeeManuallyChanged = true;
     this.isFeeAdjusted = false;
     this.feeAdjustmentReason = '';
+    
+    // Se o MAX está marcado, recalcular a quantidade automaticamente
+    if (this.isMaxChecked) {
+      this.calculateMaxAmount();
+    }
   }
 
   async calculateAdjustedFee() {
@@ -332,7 +338,7 @@ export class SendBitcoinPage implements OnInit {
         return;
       }
 
-      const amountSatoshis = Math.floor(amountNum * 100000000);
+      const amountSatoshis = Math.round(amountNum * 100000000);
       const feeSatoshis = this.baseNetworkFee;
       const DUST_LIMIT = 546;
 
@@ -360,6 +366,7 @@ export class SendBitcoinPage implements OnInit {
       const changeAmount = totalInput - amountSatoshis - feeSatoshis;
 
       if (changeAmount > 0 && changeAmount < DUST_LIMIT) {
+
         const adjustedFee = totalInput - amountSatoshis;
         this.networkFee = adjustedFee;
         this.isFeeAdjusted = true;
@@ -382,12 +389,28 @@ export class SendBitcoinPage implements OnInit {
   }
 
   onAmountChange() {
-    if (this.amount && this.recipientAddress.trim()) {
-      this.calculateAdjustedFee();
+    // Se o usuário editar manualmente a quantidade, desmarcar o MAX
+    if (this.isMaxChecked) {
+      this.isMaxChecked = false;
+      // Recalcular a taxa quando o MAX é desmarcado
+      if (this.recipientAddress.trim() && this.amount) {
+        // Se a taxa não foi alterada manualmente, recarregar a taxa recomendada
+        if (!this.isFeeManuallyChanged) {
+          this.loadRecommendedFee();
+        } else {
+          // Se a taxa foi alterada manualmente, apenas recalcular a taxa ajustada
+          this.calculateAdjustedFee();
+        }
+      }
     } else {
-      this.networkFee = this.baseNetworkFee;
-      this.isFeeAdjusted = false;
-      this.feeAdjustmentReason = '';
+      // Se o MAX não está marcado, apenas recalcular a taxa ajustada normalmente
+      if (this.amount && this.recipientAddress.trim()) {
+        this.calculateAdjustedFee();
+      } else {
+        this.networkFee = this.baseNetworkFee;
+        this.isFeeAdjusted = false;
+        this.feeAdjustmentReason = '';
+      }
     }
   }
 
@@ -409,6 +432,18 @@ export class SendBitcoinPage implements OnInit {
   async setMaxAmount() {
     if (!this.wallet) return;
 
+    // Alternar o estado do checkbox MAX
+    this.isMaxChecked = !this.isMaxChecked;
+
+    if (this.isMaxChecked) {
+      // Se foi marcado, calcular o valor máximo
+      await this.calculateMaxAmount();
+    }
+  }
+
+  private async calculateMaxAmount() {
+    if (!this.wallet) return;
+
     try {
       const utxos = await this.bitcoinApi.getUTXOs(this.wallet.address);
       const confirmedUTXOs = utxos.filter(utxo => utxo.status && utxo.status.confirmed === true);
@@ -417,28 +452,32 @@ export class SendBitcoinPage implements OnInit {
         const feeInBTC = this.getNetworkFeeInBTC();
         const maxAmount = Math.max(0, this.balance - feeInBTC);
         this.amount = maxAmount.toFixed(8);
-        if (this.recipientAddress.trim()) {
+        // Não chamar calculateAdjustedFee se a taxa foi alterada manualmente
+        if (this.recipientAddress.trim() && !this.isFeeManuallyChanged) {
           this.calculateAdjustedFee();
         }
         return;
       }
 
       const totalSatoshis = confirmedUTXOs.reduce((sum, utxo) => sum + utxo.value, 0);
-      const feeSatoshis = this.baseNetworkFee;
+      // Usar a taxa atual (pode ter sido alterada pelo usuário)
+      const feeSatoshis = this.networkFee || this.baseNetworkFee;
 
       const maxSatoshis = Math.max(0, totalSatoshis - feeSatoshis);
       const maxAmount = maxSatoshis / 100000000;
 
       this.amount = maxAmount.toFixed(8);
 
-      if (this.recipientAddress.trim()) {
+      // Não chamar calculateAdjustedFee se a taxa foi alterada manualmente
+      if (this.recipientAddress.trim() && !this.isFeeManuallyChanged) {
         this.calculateAdjustedFee();
       }
     } catch (error) {
       const feeInBTC = this.getNetworkFeeInBTC();
       const maxAmount = Math.max(0, this.balance - feeInBTC);
       this.amount = maxAmount.toFixed(8);
-      if (this.recipientAddress.trim()) {
+      // Não chamar calculateAdjustedFee se a taxa foi alterada manualmente
+      if (this.recipientAddress.trim() && !this.isFeeManuallyChanged) {
         this.calculateAdjustedFee();
       }
     }

@@ -36,8 +36,13 @@
           type="number"
           step="0.00000001">
         </ion-input>
-        <ion-button fill="outline" slot="end" size="small" (click)="setMaxAmount()" color="primary">
-          <ion-icon name="arrow-up-outline" slot="start"></ion-icon>
+        <ion-button 
+          [fill]="isMaxChecked ? 'solid' : 'outline'" 
+          slot="end" 
+          size="small" 
+          (click)="setMaxAmount()" 
+          [color]="isMaxChecked ? 'success' : 'primary'">
+          <ion-icon [name]="isMaxChecked ? 'checkmark-circle' : 'arrow-up-outline'" slot="start"></ion-icon>
           MAX
         </ion-button>
       </ion-item>
