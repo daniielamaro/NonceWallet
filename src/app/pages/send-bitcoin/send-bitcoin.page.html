@@ -33,8 +33,9 @@
           [(ngModel)]="amount"
           (ionInput)="onAmountChange()"
           placeholder="0.00000000"
-          type="number"
-          step="0.00000001">
+          type="text"
+          inputmode="decimal"
+          pattern="[0-9]*\.?[0-9]{0,8}">
         </ion-input>
         <ion-button 
           [fill]="isMaxChecked ? 'solid' : 'outline'" 
@@ -48,7 +49,7 @@
       </ion-item>
 
       <div class="amount-info" *ngIf="amount">
-        <p>Valor: ≈ R$ {{ (getAmountInBRL() || '0.00') }} BRL / ${{ (getAmountInUSD() || '0.00') }} USD</p>
+        <p>Valor: R$ {{ (getAmountInBRL() || '0.00') }} BRL / ${{ (getAmountInUSD() || '0.00') }} USD</p>
       </div>
 
       <ion-item>
@@ -108,13 +109,13 @@
       <div class="fee-info">
         <p class="fee-label">Taxa de rede:</p>
         <p class="fee-amount">{{ (getNetworkFeeInBTC() || 0).toFixed(8) }} BTC</p>
-        <p class="fee-fiat">≈ R$ {{ (getNetworkFeeInBRL() || '0.00') }} BRL / ${{ (getNetworkFeeInUSD() || '0.00') }} USD</p>
+        <p class="fee-fiat">R$ {{ (getNetworkFeeInBRL() || '0.00') }} BRL / ${{ (getNetworkFeeInUSD() || '0.00') }} USD</p>
       </div>
 
       <div class="total-info" *ngIf="amount">
         <p class="total-label">Total a ser enviado:</p>
         <p class="total-amount">{{ (getTotalAmount() || 0).toFixed(8) }} BTC</p>
-        <p class="total-fiat">≈ R$ {{ (getTotalInBRL() || '0.00') }} BRL / ${{ (getTotalInUSD() || '0.00') }} USD</p>
+        <p class="total-fiat">R$ {{ (getTotalInBRL() || '0.00') }} BRL / ${{ (getTotalInUSD() || '0.00') }} USD</p>
       </div>
 
       <ion-button

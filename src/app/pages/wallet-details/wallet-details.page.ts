@@ -215,11 +215,11 @@ export class WalletDetailsPage implements OnInit {
       case 'btc':
         const priceBRL = this.btcPriceBRL || this.bitcoinApi.getCurrentPriceBRL();
         const priceUSD = this.btcPriceUSD || this.bitcoinApi.getCurrentPriceUSD();
-        return `≈ R$ ${(availableBalance * priceBRL).toFixed(2)} / $${(availableBalance * priceUSD).toFixed(2)}`;
+        return `R$ ${(availableBalance * priceBRL).toFixed(2)} / $${(availableBalance * priceUSD).toFixed(2)}`;
       case 'satoshi':
-        return `≈ ${availableBalance.toFixed(8)} BTC`;
+        return `${availableBalance.toFixed(8)} BTC`;
       case 'brl':
-        return `≈ ${availableBalance.toFixed(8)} BTC`;
+        return `${availableBalance.toFixed(8)} BTC`;
       default:
         return '';
     }

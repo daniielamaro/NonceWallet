@@ -4,8 +4,8 @@ import { StorageService } from '../../services/storage.service';
 import { BitcoinApiService } from '../../services/bitcoin-api.service';
 import { TransactionService, UTXO } from '../../services/transaction.service';
 import { AlertService } from '../../services/alert.service';
-import { firstValueFrom } from 'rxjs';
 import { Wallet } from 'src/app/domain/wallet';
+import Decimal from 'decimal.js';
 
 @Component({
   selector: 'app-send-bitcoin',
@@ -105,9 +105,16 @@ export class SendBitcoinPage implements OnInit {
     estimatedInputs = Math.max(1, Math.min(confirmedUTXOs.length, 3));
 
     if (this.amount && this.recipientAddress.trim()) {
-      const amountNum = parseFloat(this.amount);
-      if (!isNaN(amountNum) && amountNum > 0) {
-        const amountSatoshis = Math.floor(amountNum * 100000000);
+      let amountDecimal: Decimal;
+      try {
+        amountDecimal = new Decimal(this.amount);
+      } catch {
+        this.loadRecommendedFeeFallback(addressType, estimatedInputs, 2);
+        return;
+      }
+      
+      if (amountDecimal.gt(0)) {
+        const amountSatoshis = amountDecimal.mul(100000000).floor().toNumber();
 
         const totalBalanceSatoshis = confirmedUTXOs.reduce((sum, utxo) => sum + utxo.value, 0);
         const DUST_LIMIT = 546;
@@ -181,8 +188,15 @@ export class SendBitcoinPage implements OnInit {
       return;
     }
 
-    const amountNum = parseFloat(this.amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
+    let amountDecimal: Decimal;
+    try {
+      amountDecimal = new Decimal(this.amount || '0');
+    } catch {
+      await this.alertService.error('Por favor, informe um valor válido');
+      return;
+    }
+    
+    if (amountDecimal.lte(0)) {
       await this.alertService.error('Por favor, informe um valor válido');
       return;
     }
@@ -193,14 +207,14 @@ export class SendBitcoinPage implements OnInit {
     }
 
     const feeInBTC = this.getNetworkFeeInBTC();
-    let totalNeeded = amountNum + feeInBTC;
+    const feeDecimal = new Decimal(feeInBTC);
+    const totalNeeded = amountDecimal.plus(feeDecimal);
 
-    let x = totalNeeded.toFixed(8);
-    totalNeeded = parseFloat(x);
+    const balanceDecimal = new Decimal(this.balance);
 
-    if (totalNeeded > this.balance) {
+    if (totalNeeded.gt(balanceDecimal)) {
       await this.alertService.error(
-        `Necessário: ${totalNeeded.toFixed(8)} BTC\n(${amountNum.toFixed(8)} BTC + ${feeInBTC.toFixed(8)} BTC de taxa)`
+        `Necessário: ${totalNeeded.toFixed(8)} BTC\n(${amountDecimal.toFixed(8)} BTC + ${feeDecimal.toFixed(8)} BTC de taxa)`
       );
       return;
     }
@@ -231,7 +245,7 @@ export class SendBitcoinPage implements OnInit {
       const txHex = await this.transactionService.buildTransaction(
         utxos,
         this.recipientAddress.trim(),
-        amountNum,
+        amountDecimal.toNumber(),
         this.networkFee,
         this.wallet.privateKey,
         this.wallet.address
@@ -275,7 +289,8 @@ export class SendBitcoinPage implements OnInit {
             const actualFee = actualFeeMatch ? parseInt(actualFeeMatch[1]) : null;
 
             const adjustmentNeeded = 546 - changeAmount;
-            const suggestedAmount = amountNum - (adjustmentNeeded / 100000000);
+            const adjustmentDecimal = new Decimal(adjustmentNeeded).div(100000000);
+            const suggestedAmount = amountDecimal.minus(adjustmentDecimal);
 
             errorMessage =
               `⚠️ Troco muito pequeno para criar transação\n\n` +
@@ -318,8 +333,16 @@ export class SendBitcoinPage implements OnInit {
       return;
     }
 
-    const amountNum = parseFloat(this.amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
+    let amountDecimal: Decimal;
+    try {
+      amountDecimal = new Decimal(this.amount);
+    } catch {
+      this.isFeeAdjusted = false;
+      this.feeAdjustmentReason = '';
+      return;
+    }
+    
+    if (amountDecimal.lte(0)) {
       this.isFeeAdjusted = false;
       this.feeAdjustmentReason = '';
       return;
@@ -338,7 +361,7 @@ export class SendBitcoinPage implements OnInit {
         return;
       }
 
-      const amountSatoshis = Math.round(amountNum * 100000000);
+      const amountSatoshis = amountDecimal.mul(100000000).round().toNumber();
       const feeSatoshis = this.baseNetworkFee;
       const DUST_LIMIT = 546;
 
@@ -389,6 +412,14 @@ export class SendBitcoinPage implements OnInit {
   }
 
   onAmountChange() {
+    // Validar e limitar a 8 casas decimais
+    if (this.amount) {
+      const validated = this.validateAndLimitDecimals(this.amount);
+      if (validated !== this.amount) {
+        this.amount = validated;
+      }
+    }
+
     // Se o usuário editar manualmente a quantidade, desmarcar o MAX
     if (this.isMaxChecked) {
       this.isMaxChecked = false;
@@ -412,6 +443,26 @@ export class SendBitcoinPage implements OnInit {
         this.feeAdjustmentReason = '';
       }
     }
+  }
+
+  private validateAndLimitDecimals(value: string): string {
+    if (!value) return '';
+    
+    // Remove caracteres inválidos, mantendo apenas números e ponto decimal
+    let cleaned = value.replace(/[^\d.]/g, '');
+    
+    // Remove múltiplos pontos decimais, mantendo apenas o primeiro
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Limita a 8 casas decimais
+    if (parts.length === 2 && parts[1].length > 8) {
+      cleaned = parts[0] + '.' + parts[1].substring(0, 8);
+    }
+    
+    return cleaned;
   }
 
   onRecipientAddressChange() {
@@ -450,7 +501,9 @@ export class SendBitcoinPage implements OnInit {
 
       if (confirmedUTXOs.length === 0) {
         const feeInBTC = this.getNetworkFeeInBTC();
-        const maxAmount = Math.max(0, this.balance - feeInBTC);
+        const balanceDecimal = new Decimal(this.balance);
+        const feeDecimal = new Decimal(feeInBTC);
+        const maxAmount = Decimal.max(0, balanceDecimal.minus(feeDecimal));
         this.amount = maxAmount.toFixed(8);
         // Não chamar calculateAdjustedFee se a taxa foi alterada manualmente
         if (this.recipientAddress.trim() && !this.isFeeManuallyChanged) {
@@ -463,8 +516,10 @@ export class SendBitcoinPage implements OnInit {
       // Usar a taxa atual (pode ter sido alterada pelo usuário)
       const feeSatoshis = this.networkFee || this.baseNetworkFee;
 
-      const maxSatoshis = Math.max(0, totalSatoshis - feeSatoshis);
-      const maxAmount = maxSatoshis / 100000000;
+      const totalSatoshisDecimal = new Decimal(totalSatoshis);
+      const feeSatoshisDecimal = new Decimal(feeSatoshis);
+      const maxSatoshis = Decimal.max(0, totalSatoshisDecimal.minus(feeSatoshisDecimal));
+      const maxAmount = maxSatoshis.div(100000000);
 
       this.amount = maxAmount.toFixed(8);
 
@@ -474,7 +529,9 @@ export class SendBitcoinPage implements OnInit {
       }
     } catch (error) {
       const feeInBTC = this.getNetworkFeeInBTC();
-      const maxAmount = Math.max(0, this.balance - feeInBTC);
+      const balanceDecimal = new Decimal(this.balance);
+      const feeDecimal = new Decimal(feeInBTC);
+      const maxAmount = Decimal.max(0, balanceDecimal.minus(feeDecimal));
       this.amount = maxAmount.toFixed(8);
       // Não chamar calculateAdjustedFee se a taxa foi alterada manualmente
       if (this.recipientAddress.trim() && !this.isFeeManuallyChanged) {
@@ -486,7 +543,7 @@ export class SendBitcoinPage implements OnInit {
   getNetworkFeeInBTC(): number {
     try {
       const fee = this.networkFee || 0;
-      return fee / 100000000;
+      return new Decimal(fee).div(100000000).toNumber();
     } catch (error) {
       return 0;
     }
@@ -494,8 +551,9 @@ export class SendBitcoinPage implements OnInit {
 
   getTotalAmount(): number {
     try {
-      const amountNum = parseFloat(this.amount || '0') || 0;
-      return amountNum + this.getNetworkFeeInBTC();
+      const amountDecimal = new Decimal(this.amount || '0');
+      const feeDecimal = new Decimal(this.getNetworkFeeInBTC());
+      return amountDecimal.plus(feeDecimal).toNumber();
     } catch (error) {
       return 0;
     }
@@ -544,8 +602,9 @@ export class SendBitcoinPage implements OnInit {
   getAvailableBalance(): number {
     try {
       const feeInBTC = this.getNetworkFeeInBTC();
-      const balance = this.balance || 0;
-      return Math.max(0, balance - feeInBTC);
+      const balanceDecimal = new Decimal(this.balance || 0);
+      const feeDecimal = new Decimal(feeInBTC);
+      return Decimal.max(0, balanceDecimal.minus(feeDecimal)).toNumber();
     } catch (error) {
       return 0;
     }
@@ -553,9 +612,9 @@ export class SendBitcoinPage implements OnInit {
 
   getAmountInUSD(): string {
     try {
-      const amountNum = parseFloat(this.amount || '0') || 0;
+      const amountDecimal = new Decimal(this.amount || '0');
       const price = this.btcPriceUSD || this.bitcoinApi.getCurrentPriceUSD() || 0;
-      return (amountNum * price).toFixed(2);
+      return amountDecimal.mul(price).toFixed(2);
     } catch (error) {
       return '0.00';
     }
@@ -563,9 +622,9 @@ export class SendBitcoinPage implements OnInit {
 
   getAmountInBRL(): string {
     try {
-      const amountNum = parseFloat(this.amount || '0') || 0;
+      const amountDecimal = new Decimal(this.amount || '0');
       const price = this.btcPriceBRL || this.bitcoinApi.getCurrentPriceBRL() || 0;
-      return (amountNum * price).toFixed(2);
+      return amountDecimal.mul(price).toFixed(2);
     } catch (error) {
       return '0.00';
     }

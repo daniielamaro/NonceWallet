@@ -7,6 +7,7 @@ import { initEccLib } from 'bitcoinjs-lib';
 import { ECPairFactory } from 'ecpair';
 import * as ecc from 'tiny-secp256k1';
 import { Buffer } from 'buffer';
+import Decimal from 'decimal.js';
 
 export interface UTXO {
   txid: string;
@@ -85,7 +86,8 @@ export class TransactionService {
     privateKey: string,
     senderAddress: string
   ): Promise<string> {
-    const amountSatoshis = Math.floor(amount * 100000000);
+    const amountDecimal = new Decimal(amount);
+    const amountSatoshis = amountDecimal.mul(100000000).floor().toNumber();
     const feeSatoshis = fee;
 
     const confirmedUTXOs = utxos.filter(utxo => {
@@ -138,11 +140,12 @@ export class TransactionService {
     if (finalChangeAmount > 0 && finalChangeAmount < DUST_LIMIT) {
       const feeIfNoChange = totalInput - amountSatoshis;
       const adjustmentNeeded = DUST_LIMIT - finalChangeAmount;
+      const adjustmentDecimal = new Decimal(adjustmentNeeded).div(100000000);
       throw new Error(
         `Não é possível criar uma transação que respeite a taxa especificada de ${feeSatoshis} satoshis. ` +
         `O troco calculado (${finalChangeAmount} satoshis) é menor que o dust limit (${DUST_LIMIT} satoshis). ` +
         `Sem output de troco, a taxa seria ${feeIfNoChange} satoshis em vez de ${feeSatoshis} satoshis. ` +
-        `Considere reduzir o valor enviado em ${(adjustmentNeeded / 100000000).toFixed(8)} BTC ou usar uma taxa de ${feeSatoshis + adjustmentNeeded} satoshis.`
+        `Considere reduzir o valor enviado em ${adjustmentDecimal.toFixed(8)} BTC ou usar uma taxa de ${feeSatoshis + adjustmentNeeded} satoshis.`
       );
     }
 

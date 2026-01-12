@@ -63,7 +63,7 @@
         </div>
         <div class="pending-amount">{{ pendingReceive.toFixed(8) }} BTC</div>
         <div class="pending-fiat">
-          ≈ R$ {{ getPendingReceiveInBRL() }} BRL / ${{ getPendingReceiveInUSD() }} USD
+          R$ {{ getPendingReceiveInBRL() }} BRL / ${{ getPendingReceiveInUSD() }} USD
         </div>
       </div>
 
@@ -74,7 +74,7 @@
         </div>
         <div class="pending-amount">{{ pendingSend.toFixed(8) }} BTC</div>
         <div class="pending-fiat">
-          ≈ R$ {{ getPendingSendInBRL() }} BRL / ${{ getPendingSendInUSD() }} USD
+          R$ {{ getPendingSendInBRL() }} BRL / ${{ getPendingSendInUSD() }} USD
         </div>
       </div>
 
@@ -82,7 +82,7 @@
         <div class="total-pending-label">Saldo Total (incluindo pendentes)</div>
         <div class="total-pending-amount">{{ getTotalBalance().toFixed(8) }} BTC</div>
         <div class="total-pending-fiat">
-          ≈ R$ {{ getTotalBalanceInBRL() }} BRL / ${{ getTotalBalanceInUSD() }} USD
+          R$ {{ getTotalBalanceInBRL() }} BRL / ${{ getTotalBalanceInUSD() }} USD
         </div>
       </div>
     </div>

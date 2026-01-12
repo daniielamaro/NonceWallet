@@ -41,7 +41,7 @@
               {{ tx.type === 'sent' ? '-' : '+' }}{{ abs(tx.amount).toFixed(8) }} BTC
             </span>
             <span class="amount-fiat">
-              ≈ R$ {{ getAmountInBRL(tx.amount) }} / ${{ getAmountInUSD(tx.amount) }}
+              R$ {{ getAmountInBRL(tx.amount) }} / ${{ getAmountInUSD(tx.amount) }}
             </span>
           </div>
         </div>
