@@ -28,6 +28,8 @@
     "@capacitor/keyboard": "8.0.0",
     "@capacitor/status-bar": "8.0.0",
     "@ionic/angular": "^8.0.0",
+    "bip32": "^5.0.0",
+    "bip39": "^3.1.0",
     "bitcoinjs-lib": "^7.0.0",
     "buffer": "^6.0.3",
     "ecpair": "^3.0.0",

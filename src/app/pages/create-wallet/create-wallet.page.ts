@@ -142,9 +142,7 @@ export class CreateWalletPage {
   }
 
   isWordValid(word: string): boolean {
-    if (!word || word.trim() === '') return false;
-    const wordList = (this.walletService as any).wordList;
-    return wordList && wordList.includes(word.trim().toLowerCase());
+    return this.walletService.isWordValid(word);
   }
 
   getFilledWordsCount(): number {
@@ -173,6 +171,10 @@ export class CreateWalletPage {
     this.seedWords = Array(12).fill('');
     this.seedInputText = '';
     this.createMode = 'generate';
+    // Ao mudar para import, define SegWit como padrão (mais comum)
+    if (this.mode === 'import') {
+      this.addressType = 'segwit';
+    }
   }
 
   onCreateModeChange() {

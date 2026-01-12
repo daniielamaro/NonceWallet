@@ -9,7 +9,8 @@ O **Nonce Wallet** é uma aplicação de carteira Bitcoin que permite aos usuár
 ### ✨ Funcionalidades Principais
 
 - **Criação de Carteiras**: Gere novas carteiras Bitcoin com seed de 12 palavras (BIP39)
-- **Importação de Carteiras**: Importe carteiras existentes usando seed phrase
+- **Importação de Carteiras**: Importe carteiras existentes de outras aplicações usando seed phrase
+- **Compatibilidade Total com Outras Carteiras**: Suporte completo a padrões BIP39, BIP32, BIP44, BIP84 e BIP86
 - **Suporte a Múltiplos Tipos de Endereço**:
   - **SegWit (BIP84)**: Reduz taxas em ~40% comparado a endereços Legacy
   - **Taproot (BIP86)**: Versão mais moderna, reduz taxas em ~15-20% a mais que SegWit, oferece maior privacidade e eficiência
@@ -48,6 +49,8 @@ O **Nonce Wallet** é uma aplicação de carteira Bitcoin que permite aos usuár
 
 ### Blockchain & Criptografia
 - **bitcoinjs-lib 7.0**: Biblioteca para manipulação de transações Bitcoin
+- **bip39**: Implementação completa do padrão BIP39 para mnemônicos
+- **bip32**: Derivação hierárquica determinística (HD Wallets)
 - **ecpair 3.0**: Geração e manipulação de pares de chaves
 - **tiny-secp256k1 2.2**: Criptografia de curva elíptica
 
@@ -141,10 +144,15 @@ private network = bitcoin.networks.bitcoin   // Para mainnet (padrão)
 
 ### Geração de Carteiras
 
-- **Seed BIP39**: Geração de seed de 12 palavras
-- **Derivação BIP32/BIP44**: Derivação hierárquica de chaves
-- **Suporte BIP84 (SegWit)**: Endereços `bc1...` (42 caracteres)
-- **Suporte BIP86 (Taproot)**: Endereços `bc1p...` (62 caracteres)
+- **BIP39 Completo**: Implementação completa do padrão BIP39
+  - Geração de mnemônicos com entropia criptograficamente segura
+  - Validação de checksum BIP39
+  - Derivação de seed usando PBKDF2 com HMAC-SHA512 (2048 iterações)
+  - Compatível com todas as carteiras que seguem o padrão BIP39
+- **BIP32 (HD Wallets)**: Derivação hierárquica determinística de chaves
+- **BIP44**: Suporte a caminhos de derivação padrão para Bitcoin
+- **BIP84 (SegWit)**: Endereços `bc1...` (42 caracteres) - caminho `m/84'/0'/0'/0/0`
+- **BIP86 (Taproot)**: Endereços `bc1p...` (62 caracteres) - caminho `m/86'/0'/0'/0/0`
 
 ### Transações
 
@@ -156,8 +164,51 @@ private network = bitcoin.networks.bitcoin   // Para mainnet (padrão)
 ### Segurança
 
 - **Armazenamento Local**: Chaves privadas armazenadas localmente (não enviadas para servidores)
-- **Validação de Seeds**: Validação BIP39 para seeds
+- **Validação de Seeds**: Validação completa BIP39 (palavras e checksum)
 - **Validação de Endereços**: Verificação de formato e checksum
+- **Derivação Segura**: Uso de PBKDF2 com 2048 iterações para derivação de seeds
+
+## 🔄 Compatibilidade com Outras Carteiras
+
+O **Nonce Wallet** implementa os padrões Bitcoin mais amplamente adotados, garantindo total compatibilidade com outras carteiras populares.
+
+### ✅ Carteiras Compatíveis
+
+Você pode importar seeds de (e exportar para) as seguintes carteiras:
+
+- **BlueWallet** ✅ (SegWit - BIP84)
+- **Electrum** ✅ (SegWit - BIP84)
+- **Exodus** ✅ (SegWit/Taproot)
+- **Trust Wallet** ✅ (SegWit - BIP84)
+- **Coinbase Wallet** ✅ (SegWit - BIP84)
+- **Qualquer carteira BIP39** ✅
+
+### 📋 Como Importar uma Carteira
+
+1. **Obtenha sua seed phrase** (12 palavras) da carteira original
+2. **No Nonce Wallet**, vá em "Importar Carteira"
+3. **Selecione o tipo de endereço correto**:
+   - **SegWit (BIP84)**: Para a maioria das carteiras (BlueWallet, Electrum, etc.)
+   - **Taproot (BIP86)**: Para carteiras mais modernas
+4. **Digite ou cole as 12 palavras do seed**
+5. **Importe e acesse seus fundos**
+
+### ⚠️ Importante na Importação
+
+- **Selecione o tipo de endereço correto**: O tipo de endereço (SegWit ou Taproot) determina o caminho de derivação usado. Se você selecionar o tipo errado, gerará um endereço diferente e não verá seus fundos.
+- **BlueWallet e maioria das carteiras**: Usam **SegWit (BIP84)** por padrão
+- **Se não tiver certeza**: Tente **SegWit (BIP84)** primeiro, pois é o mais comum
+
+### 🔐 Padrões Implementados
+
+| BIP | Status | Descrição |
+|-----|--------|-----------|
+| **BIP39** | ✅ Completo | Mnemônicos e derivação de seeds |
+| **BIP32** | ✅ Implementado | HD Wallets (carteiras hierárquicas) |
+| **BIP44** | ✅ Suportado | Caminhos de derivação padrão |
+| **BIP84** | ✅ Completo | SegWit Native (endereços `bc1...`) |
+| **BIP86** | ✅ Completo | Taproot (endereços `bc1p...`) |
+| **BIP174** | ✅ Completo | PSBT (transações parcialmente assinadas) |
 
 ## 🌐 APIs Utilizadas
 
@@ -215,12 +266,21 @@ Este projeto está sob a licença especificada no arquivo `LICENSE`.
 
 ## 📚 Recursos Adicionais
 
+### Documentação Bitcoin e BIPs
+
 - [Documentação Bitcoin](https://bitcoin.org/en/developer-documentation)
+- [BIP32 - HD Wallets](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
 - [BIP39 - Mnemonic Code](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
+- [BIP44 - Multi-Account Hierarchy](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
 - [BIP84 - SegWit](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)
 - [BIP86 - Taproot](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki)
+- [BIP174 - PSBT](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
+
+### Frameworks e Bibliotecas
+
 - [Documentação Ionic](https://ionicframework.com/docs)
 - [Documentação Angular](https://angular.io/docs)
+- [BitcoinJS Library](https://github.com/bitcoinjs/bitcoinjs-lib)
 
 ---
 

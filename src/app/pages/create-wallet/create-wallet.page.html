@@ -147,6 +147,25 @@
       </div>
 
       <div *ngIf="mode === 'import'" class="import-section">
+        <div class="address-type-section" style="margin-bottom: 20px;">
+          <ion-label class="address-type-label">Tipo de Endereço da Carteira Original</ion-label>
+          <ion-segment [(ngModel)]="addressType" class="address-type-segment">
+            <ion-segment-button value="segwit">
+              <ion-label>SegWit (BIP84)</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="taproot">
+              <ion-label>Taproot (BIP86)</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+          <div class="address-type-info">
+            <small>
+              <strong>Importante:</strong> Selecione o mesmo tipo de endereço usado na carteira original.<br>
+              <strong>SegWit (BIP84):</strong> Usado pela maioria das carteiras (BlueWallet, Electrum, etc.)<br>
+              <strong>Taproot (BIP86):</strong> Carteiras mais modernas. Se não tiver certeza, tente SegWit primeiro.
+            </small>
+          </div>
+        </div>
+
         <div class="seed-input-header">
           <h3>Digite as 12 palavras do seed</h3>
           <div class="seed-progress">
