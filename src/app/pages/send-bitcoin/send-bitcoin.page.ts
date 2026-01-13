@@ -316,7 +316,6 @@ export class SendBitcoinPage implements OnInit {
     this.isFeeAdjusted = false;
     this.feeAdjustmentReason = '';
     
-    // Se o MAX está marcado, recalcular a quantidade automaticamente
     if (this.isMaxChecked) {
       this.calculateMaxAmount();
     }
@@ -412,7 +411,6 @@ export class SendBitcoinPage implements OnInit {
   }
 
   onAmountChange() {
-    // Validar e limitar a 8 casas decimais
     if (this.amount) {
       const validated = this.validateAndLimitDecimals(this.amount);
       if (validated !== this.amount) {
@@ -420,21 +418,16 @@ export class SendBitcoinPage implements OnInit {
       }
     }
 
-    // Se o usuário editar manualmente a quantidade, desmarcar o MAX
     if (this.isMaxChecked) {
       this.isMaxChecked = false;
-      // Recalcular a taxa quando o MAX é desmarcado
       if (this.recipientAddress.trim() && this.amount) {
-        // Se a taxa não foi alterada manualmente, recarregar a taxa recomendada
         if (!this.isFeeManuallyChanged) {
           this.loadRecommendedFee();
         } else {
-          // Se a taxa foi alterada manualmente, apenas recalcular a taxa ajustada
           this.calculateAdjustedFee();
         }
       }
     } else {
-      // Se o MAX não está marcado, apenas recalcular a taxa ajustada normalmente
       if (this.amount && this.recipientAddress.trim()) {
         this.calculateAdjustedFee();
       } else {
@@ -448,16 +441,13 @@ export class SendBitcoinPage implements OnInit {
   private validateAndLimitDecimals(value: string): string {
     if (!value) return '';
     
-    // Remove caracteres inválidos, mantendo apenas números e ponto decimal
     let cleaned = value.replace(/[^\d.]/g, '');
     
-    // Remove múltiplos pontos decimais, mantendo apenas o primeiro
     const parts = cleaned.split('.');
     if (parts.length > 2) {
       cleaned = parts[0] + '.' + parts.slice(1).join('');
     }
     
-    // Limita a 8 casas decimais
     if (parts.length === 2 && parts[1].length > 8) {
       cleaned = parts[0] + '.' + parts[1].substring(0, 8);
     }
@@ -483,11 +473,9 @@ export class SendBitcoinPage implements OnInit {
   async setMaxAmount() {
     if (!this.wallet) return;
 
-    // Alternar o estado do checkbox MAX
     this.isMaxChecked = !this.isMaxChecked;
 
     if (this.isMaxChecked) {
-      // Se foi marcado, calcular o valor máximo
       await this.calculateMaxAmount();
     }
   }
@@ -505,7 +493,6 @@ export class SendBitcoinPage implements OnInit {
         const feeDecimal = new Decimal(feeInBTC);
         const maxAmount = Decimal.max(0, balanceDecimal.minus(feeDecimal));
         this.amount = maxAmount.toFixed(8);
-        // Não chamar calculateAdjustedFee se a taxa foi alterada manualmente
         if (this.recipientAddress.trim() && !this.isFeeManuallyChanged) {
           this.calculateAdjustedFee();
         }
@@ -513,7 +500,6 @@ export class SendBitcoinPage implements OnInit {
       }
 
       const totalSatoshis = confirmedUTXOs.reduce((sum, utxo) => sum + utxo.value, 0);
-      // Usar a taxa atual (pode ter sido alterada pelo usuário)
       const feeSatoshis = this.networkFee || this.baseNetworkFee;
 
       const totalSatoshisDecimal = new Decimal(totalSatoshis);
@@ -523,7 +509,6 @@ export class SendBitcoinPage implements OnInit {
 
       this.amount = maxAmount.toFixed(8);
 
-      // Não chamar calculateAdjustedFee se a taxa foi alterada manualmente
       if (this.recipientAddress.trim() && !this.isFeeManuallyChanged) {
         this.calculateAdjustedFee();
       }
@@ -533,7 +518,6 @@ export class SendBitcoinPage implements OnInit {
       const feeDecimal = new Decimal(feeInBTC);
       const maxAmount = Decimal.max(0, balanceDecimal.minus(feeDecimal));
       this.amount = maxAmount.toFixed(8);
-      // Não chamar calculateAdjustedFee se a taxa foi alterada manualmente
       if (this.recipientAddress.trim() && !this.isFeeManuallyChanged) {
         this.calculateAdjustedFee();
       }

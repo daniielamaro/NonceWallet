@@ -75,6 +75,45 @@
             Ver no Mempool
           </ion-button>
         </div>
+
+        <div class="rbf-actions" *ngIf="tx.type === 'sent' && !tx.confirmed">
+          <div *ngIf="getRBFStatus(tx.txid) as rbfStatus">
+            <div *ngIf="rbfStatus.supportsRBF">
+              <ion-button 
+                *ngIf="rbfStatus.canAccelerate"
+                fill="outline" 
+                color="success" 
+                size="small"
+                (click)="accelerateTransaction(tx)"
+                [disabled]="isProcessingRBF(tx.txid)">
+                <ion-icon name="flash-outline" slot="start"></ion-icon>
+                <span *ngIf="!isProcessingRBF(tx.txid)">Acelerar</span>
+                <span *ngIf="isProcessingRBF(tx.txid)">Processando...</span>
+              </ion-button>
+              <ion-button 
+                *ngIf="rbfStatus.canCancel"
+                fill="outline" 
+                color="danger" 
+                size="small"
+                (click)="cancelTransaction(tx)"
+                [disabled]="isProcessingRBF(tx.txid)">
+                <ion-icon name="close-circle-outline" slot="start"></ion-icon>
+                <span *ngIf="!isProcessingRBF(tx.txid)">Cancelar</span>
+                <span *ngIf="isProcessingRBF(tx.txid)">Processando...</span>
+              </ion-button>
+              <div *ngIf="!rbfStatus.canAccelerate && !rbfStatus.canCancel && rbfStatus.reason" class="rbf-warning">
+                <ion-text color="warning">
+                  <small>{{ rbfStatus.reason }}</small>
+                </ion-text>
+              </div>
+            </div>
+            <div *ngIf="!rbfStatus.supportsRBF" class="rbf-info">
+              <ion-text color="medium">
+                <small>Esta transação não suporta RBF</small>
+              </ion-text>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 

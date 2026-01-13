@@ -22,7 +22,7 @@ export class AlertService {
       title: 'Erro',
       text: message,
       icon: 'error',
-      target: document.querySelector('ion-app') as HTMLElement, // <- aqui
+      target: document.querySelector('ion-app') as HTMLElement,
       confirmButtonText: 'OK',
       heightAuto: false
     });

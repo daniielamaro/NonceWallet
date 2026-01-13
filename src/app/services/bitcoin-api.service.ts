@@ -161,7 +161,7 @@ export class BitcoinApiService {
   private async verifyTransactionInMempool(txId: string, apiBase: string, maxAttempts: number = 3): Promise<void> {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); // Aguarda 1s, 2s, 3s
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); 
         
         const tx = await firstValueFrom(this.http.get(`${apiBase}/tx/${txId}`));
         if (tx) {
@@ -428,6 +428,27 @@ export class BitcoinApiService {
     const totalFee = Math.ceil(feeRate * estimatedVBytes);
     
     return Math.max(1, totalFee);
+  }
+
+  async checkTransactionSupportsRBF(txid: string): Promise<boolean> {
+    try {
+      const tx = await this.getTransaction(txid);
+      if (!tx || !tx.vin) {
+        return false;
+      }
+
+      for (const input of tx.vin) {
+        const sequence = input.sequence || 0xFFFFFFFF;
+        if (sequence < 0xFFFFFFFF) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Erro ao verificar suporte RBF:', error);
+      return false;
+    }
   }
 }
 

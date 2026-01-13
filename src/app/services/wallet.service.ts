@@ -21,7 +21,6 @@ export class WalletService {
   }
 
   generateSeed(): string[] {
-    // Gera um mnemônico BIP39 válido de 12 palavras (128 bits de entropia)
     const mnemonic = bip39.generateMnemonic(128);
     return mnemonic.split(' ');
   }
@@ -30,19 +29,12 @@ export class WalletService {
     try {
       const mnemonic = seed.join(' ');
 
-      // Valida o mnemônico BIP39
       if (!bip39.validateMnemonic(mnemonic)) {
         throw new Error('Mnemônico BIP39 inválido. Verifique se todas as palavras estão corretas.');
       }
 
-      // Converte mnemônico para seed usando PBKDF2 (BIP39)
       const seedBuffer = await bip39.mnemonicToSeed(mnemonic);
       
-      // Deriva a chave privada usando BIP32
-      // Caminhos de derivação:
-      // - SegWit (BIP84): m/84'/0'/0'/0/0
-      // - Taproot (BIP86): m/86'/0'/0'/0/0
-      // - Legacy (BIP44): m/44'/0'/0'/0/0
       const root = this.bip32.fromSeed(seedBuffer, this.network);
       let path: string;
       if (addressType === 'segwit') {
@@ -164,7 +156,6 @@ export class WalletService {
       return false;
     }
 
-    // Valida usando BIP39 (verifica palavras e checksum)
     const mnemonic = seed.join(' ');
     return bip39.validateMnemonic(mnemonic);
   }
@@ -174,7 +165,6 @@ export class WalletService {
       return false;
     }
     
-    // Obtém a lista de palavras BIP39
     const wordList = bip39.wordlists['english'];
     return wordList.includes(word.trim().toLowerCase());
   }

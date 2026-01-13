@@ -171,7 +171,6 @@ export class CreateWalletPage {
     this.seedWords = Array(12).fill('');
     this.seedInputText = '';
     this.createMode = 'generate';
-    // Ao mudar para import, define SegWit como padrão (mais comum)
     if (this.mode === 'import') {
       this.addressType = 'segwit';
     }

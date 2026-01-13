@@ -400,5 +400,323 @@ export class TransactionService {
     }
   }
 
+  async accelerateTransaction(
+    originalTxId: string,
+    newFeeSatoshis: number,
+    privateKey: string,
+    senderAddress: string,
+    availableBalanceSatoshis: number = 0
+  ): Promise<string> {
+    try {
+      const originalTx = await this.bitcoinApi.getTransaction(originalTxId);
+      if (!originalTx) {
+        throw new Error('Transação original não encontrada');
+      }
+
+      if (originalTx.status?.confirmed) {
+        throw new Error('Transação já foi confirmada e não pode ser acelerada');
+      }
+
+      const supportsRBF = await this.bitcoinApi.checkTransactionSupportsRBF(originalTxId);
+      if (!supportsRBF) {
+        throw new Error('Esta transação não suporta RBF (Replace-By-Fee)');
+      }
+
+      let originalInputValue = 0;
+      let originalOutputValue = 0;
+      let recipientAddress = '';
+      let originalAmountSatoshis = 0;
+
+      if (originalTx.vin) {
+        for (const input of originalTx.vin) {
+          if (input.prevout && input.prevout.scriptpubkey_address === senderAddress) {
+            originalInputValue += input.prevout.value || 0;
+          }
+        }
+      }
+
+      if (originalTx.vout) {
+        for (const output of originalTx.vout) {
+          if (output.scriptpubkey_address === senderAddress) {
+            originalOutputValue += output.value || 0;
+          } else {
+            recipientAddress = output.scriptpubkey_address;
+            originalAmountSatoshis += output.value || 0;
+          }
+        }
+      }
+
+      const originalFeeSatoshis = originalInputValue - (originalAmountSatoshis + originalOutputValue);
+      const feeDifference = newFeeSatoshis - originalFeeSatoshis;
+
+      if (newFeeSatoshis <= originalFeeSatoshis) {
+        throw new Error(
+          `A nova taxa (${newFeeSatoshis} satoshis) deve ser maior que a taxa original (${originalFeeSatoshis} satoshis) para acelerar`
+        );
+      }
+
+      const originalInputs: UTXO[] = [];
+      for (const input of originalTx.vin) {
+        if (input.prevout && input.prevout.scriptpubkey_address === senderAddress) {
+          originalInputs.push({
+            txid: input.txid,
+            vout: input.vout,
+            value: input.prevout.value,
+            status: { confirmed: false }
+          });
+        }
+      }
+
+      const originalChangeAmount = originalInputValue - originalAmountSatoshis - originalFeeSatoshis;
+      
+      let newChangeAmount = originalInputValue - originalAmountSatoshis - newFeeSatoshis;
+      
+      let additionalInputs: UTXO[] = [];
+      let additionalInputValue = 0;
+      
+      if (newChangeAmount < 0) {
+        const neededAmount = Math.abs(newChangeAmount);
+        
+        if (neededAmount > availableBalanceSatoshis) {
+          throw new Error(
+            `Saldo disponível insuficiente para acelerar. ` +
+            `Necessário: ${neededAmount} satoshis, ` +
+            `Disponível: ${availableBalanceSatoshis} satoshis ` +
+            `(troco original: ${originalChangeAmount} satoshis)`
+          );
+        }
+        
+        const allUtxos = await this.bitcoinApi.getUTXOs(senderAddress, false);
+        
+        const sortedUtxos = [...allUtxos]
+          .filter(utxo => {
+            return !originalInputs.some(origInput => 
+              origInput.txid === utxo.txid && origInput.vout === utxo.vout
+            );
+          })
+          .sort((a, b) => b.value - a.value);
+        
+        for (const utxo of sortedUtxos) {
+          if (additionalInputValue >= neededAmount) break;
+          additionalInputs.push(utxo);
+          additionalInputValue += utxo.value;
+        }
+        
+        if (additionalInputValue < neededAmount) {
+          throw new Error(
+            `Saldo disponível insuficiente para acelerar. ` +
+            `Necessário: ${neededAmount} satoshis, ` +
+            `Disponível em UTXOs adicionais: ${additionalInputValue} satoshis`
+          );
+        }
+        
+        const totalInputValue = originalInputValue + additionalInputValue;
+        newChangeAmount = totalInputValue - originalAmountSatoshis - newFeeSatoshis;
+      } else if (newChangeAmount > 0 && newChangeAmount < 546) {
+        const dustAdjustment = newChangeAmount;
+        const adjustedFee = newFeeSatoshis + dustAdjustment;
+        const adjustedNeeded = adjustedFee - originalFeeSatoshis;
+        
+        if (adjustedNeeded > originalChangeAmount + availableBalanceSatoshis) {
+          throw new Error(
+            `Saldo insuficiente para acelerar (incluindo ajuste de dust). ` +
+            `Necessário: ${adjustedNeeded} satoshis, ` +
+            `Disponível: ${originalChangeAmount + availableBalanceSatoshis} satoshis`
+          );
+        }
+        
+        if (adjustedNeeded > originalChangeAmount) {
+          const neededFromBalance = adjustedNeeded - originalChangeAmount;
+          const allUtxos = await this.bitcoinApi.getUTXOs(senderAddress, false);
+          const sortedUtxos = [...allUtxos]
+            .filter(utxo => {
+              return !originalInputs.some(origInput => 
+                origInput.txid === utxo.txid && origInput.vout === utxo.vout
+              );
+            })
+            .sort((a, b) => b.value - a.value);
+          
+          for (const utxo of sortedUtxos) {
+            if (additionalInputValue >= neededFromBalance) break;
+            additionalInputs.push(utxo);
+            additionalInputValue += utxo.value;
+          }
+          
+          if (additionalInputValue < neededFromBalance) {
+            throw new Error('Saldo insuficiente para acelerar (ajuste de dust)');
+          }
+        }
+      }
+      
+      const allInputs = [...originalInputs, ...additionalInputs];
+
+      const DUST_LIMIT = 546;
+      if (newChangeAmount > 0 && newChangeAmount < DUST_LIMIT) {
+        const adjustedFee = newFeeSatoshis + newChangeAmount;
+        const adjustedChangeAmount = 0;
+
+        const utxosWithScripts = await this.getUTXOsWithScripts(allInputs);
+        return await this.createRawTransactionHex(
+          utxosWithScripts,
+          recipientAddress,
+          senderAddress,
+          originalAmountSatoshis,
+          adjustedChangeAmount,
+          adjustedFee,
+          privateKey
+        );
+      }
+
+      const utxosWithScripts = await this.getUTXOsWithScripts(allInputs);
+      return await this.createRawTransactionHex(
+        utxosWithScripts,
+        recipientAddress,
+        senderAddress,
+        originalAmountSatoshis,
+        newChangeAmount,
+        newFeeSatoshis,
+        privateKey
+      );
+    } catch (error: any) {
+      console.error('Erro ao acelerar transação:', error);
+      throw new Error(`Erro ao acelerar transação: ${error.message || error}`);
+    }
+  }
+
+  async cancelTransaction(
+    originalTxId: string,
+    newFeeSatoshis: number,
+    privateKey: string,
+    senderAddress: string,
+    sentAmountSatoshis: number
+  ): Promise<string> {
+    try {
+      const originalTx = await this.bitcoinApi.getTransaction(originalTxId);
+      if (!originalTx) {
+        throw new Error('Transação original não encontrada');
+      }
+
+      if (originalTx.status?.confirmed) {
+        throw new Error('Transação já foi confirmada e não pode ser cancelada');
+      }
+
+      const supportsRBF = await this.bitcoinApi.checkTransactionSupportsRBF(originalTxId);
+      if (!supportsRBF) {
+        throw new Error('Esta transação não suporta RBF (Replace-By-Fee)');
+      }
+
+      let totalInputValue = 0;
+      let originalSentAmountSatoshis = 0;
+
+      if (originalTx.vin) {
+        for (const input of originalTx.vin) {
+          if (input.prevout && input.prevout.scriptpubkey_address === senderAddress) {
+            totalInputValue += input.prevout.value || 0;
+          }
+        }
+      }
+
+      if (originalTx.vout) {
+        for (const output of originalTx.vout) {
+          if (output.scriptpubkey_address !== senderAddress) {
+            originalSentAmountSatoshis += output.value || 0;
+          }
+        }
+      }
+
+      let totalOutputValue = 0;
+      if (originalTx.vout) {
+        for (const output of originalTx.vout) {
+          totalOutputValue += output.value || 0;
+        }
+      }
+
+      const currentFeeSatoshis = totalInputValue - totalOutputValue;
+      const feeDifference = newFeeSatoshis - currentFeeSatoshis;
+
+      const actualSentAmount = sentAmountSatoshis > 0 ? sentAmountSatoshis : originalSentAmountSatoshis;
+
+      if (feeDifference > actualSentAmount) {
+        throw new Error(
+          `Valor enviado insuficiente para cancelar. ` +
+          `Diferença de taxa necessária: ${feeDifference} satoshis, ` +
+          `Valor enviado: ${actualSentAmount} satoshis`
+        );
+      }
+
+      const allInputs: UTXO[] = [];
+      for (const input of originalTx.vin) {
+        if (input.prevout && input.prevout.scriptpubkey_address === senderAddress) {
+          allInputs.push({
+            txid: input.txid,
+            vout: input.vout,
+            value: input.prevout.value,
+            status: { confirmed: false }
+          });
+        }
+      }
+
+      const DUST_LIMIT = 546;
+      
+      const amountToSendBack = totalInputValue - newFeeSatoshis;
+
+      if (amountToSendBack < 0) {
+        throw new Error('A nova taxa é maior que o valor total dos inputs. Não é possível cancelar.');
+      }
+
+      if (amountToSendBack < DUST_LIMIT && amountToSendBack > 0) {
+        const adjustedFee = totalInputValue;
+        const adjustedAmount = 0;
+        
+        const adjustedFeeDifference = adjustedFee - currentFeeSatoshis;
+        if (adjustedFeeDifference > actualSentAmount) {
+          throw new Error(
+            `Valor enviado insuficiente para cancelar. ` +
+            `Diferença de taxa necessária: ${adjustedFeeDifference} satoshis, ` +
+            `Valor enviado: ${actualSentAmount} satoshis`
+          );
+        }
+
+        const utxosWithScripts = await this.getUTXOsWithScripts(allInputs);
+        return await this.createRawTransactionHex(
+          utxosWithScripts,
+          senderAddress,
+          senderAddress,
+          adjustedAmount,
+          0,
+          adjustedFee,
+          privateKey
+        );
+      }
+
+      if (amountToSendBack === 0) {
+        const utxosWithScripts = await this.getUTXOsWithScripts(allInputs);
+        return await this.createRawTransactionHex(
+          utxosWithScripts,
+          senderAddress,
+          senderAddress,
+          0,
+          0,
+          totalInputValue,
+          privateKey
+        );
+      }
+
+      const utxosWithScripts = await this.getUTXOsWithScripts(allInputs);
+      return await this.createRawTransactionHex(
+        utxosWithScripts,
+        senderAddress,
+        senderAddress,
+        amountToSendBack,
+        0,
+        newFeeSatoshis,
+        privateKey
+      );
+    } catch (error: any) {
+      console.error('Erro ao cancelar transação:', error);
+      throw new Error(`Erro ao cancelar transação: ${error.message || error}`);
+    }
+  }
+
 }
 
