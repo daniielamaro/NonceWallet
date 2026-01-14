@@ -119,14 +119,12 @@ export class TransactionHistoryPage implements OnInit {
               
               const recommendedFee = await this.bitcoinApi.getRecommendedFeeInSatoshis(250, 'fastest');
               
-              let cancelFee = Math.max(
-                Math.ceil(originalFeeSatoshis * 1.1),
-                recommendedFee,
-                originalFeeSatoshis + 20
-              );
+              // Para RBF, teoricamente pagar o dobro da taxa original já permite substituir
+              // Usamos 2x a taxa original + uma pequena margem de segurança (1 satoshi) para garantir
+              const minCancelFee = Math.ceil(originalFeeSatoshis * 2) + 1;
               
               const feeDifference = recommendedFee - originalFeeSatoshis;
-              const cancelFeeDifference = cancelFee - originalFeeSatoshis;
+              const cancelFeeDifference = minCancelFee - originalFeeSatoshis;
               
               const sentAmountSatoshis = Math.abs(tx.amountSatoshis);
               
@@ -135,6 +133,7 @@ export class TransactionHistoryPage implements OnInit {
               const totalAvailableForFee = originalChangeAmount + availableBalanceSatoshis;
               const canAccelerate = feeDifference > 0 && totalAvailableForFee >= feeDifference;
               
+              // Verifica se o valor enviado consegue cobrir a diferença de taxa necessária para cancelar
               const canCancel = sentAmountSatoshis > 0 && cancelFeeDifference <= sentAmountSatoshis;
               
               this.rbfStatus.set(tx.txid, {
@@ -260,8 +259,6 @@ export class TransactionHistoryPage implements OnInit {
     try {
       this.processingRBF.add(tx.txid);
       
-      const recommendedFee = await this.bitcoinApi.getRecommendedFeeInSatoshis(250, 'fastest');
-      
       const txDetails = await this.bitcoinApi.getTransaction(tx.txid);
       if (!txDetails) {
         throw new Error('Não foi possível obter detalhes da transação');
@@ -286,13 +283,8 @@ export class TransactionHistoryPage implements OnInit {
       
       const originalFeeSatoshis = originalInputValue - originalOutputValue;
       
-      let cancelFee = Math.max(
-        Math.ceil(originalFeeSatoshis * 1.1),
-        recommendedFee,
-        originalFeeSatoshis + 20
-      );
-      
-      const feeDifference = cancelFee - originalFeeSatoshis;
+
+      const minCancelFee = Math.ceil(originalFeeSatoshis * 2) + 1;
       
       let sentAmountSatoshis = 0;
       if (txDetails.vout) {
@@ -307,13 +299,18 @@ export class TransactionHistoryPage implements OnInit {
         sentAmountSatoshis = Math.abs(tx.amountSatoshis);
       }
       
+      const feeDifference = minCancelFee - originalFeeSatoshis;
+
       if (feeDifference > sentAmountSatoshis) {
         throw new Error(
-          `Valor enviado insuficiente para cancelar. ` +
-          `Diferença de taxa necessária: ${feeDifference} satoshis, ` +
-          `Valor enviado: ${sentAmountSatoshis} satoshis`
+          `Cancelamento não é possível: o valor enviado (${sentAmountSatoshis} satoshis) ` +
+          `não é suficiente para cobrir a diferença de taxa necessária (${feeDifference} satoshis). ` +
+          `Taxa original: ${originalFeeSatoshis} satoshis, ` +
+          `Taxa mínima para cancelar: ${minCancelFee} satoshis`
         );
       }
+      
+      const cancelFee = minCancelFee;
 
       const txHex = await this.transactionService.cancelTransaction(
         tx.txid,
