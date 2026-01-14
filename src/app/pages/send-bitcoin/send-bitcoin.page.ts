@@ -64,37 +64,19 @@ export class SendBitcoinPage implements OnInit {
     this.btcPriceUSD = await this.bitcoinApi.getBitcoinPriceUSD();
   }
 
-  private estimateTransactionSize(addressType: 'segwit' | 'taproot' | 'legacy', numInputs: number = 1, numOutputs: number = 2): number {
+  private estimateTransactionSize(numInputs: number = 1, numOutputs: number = 2): number {
     const baseSize = 10;
 
-    if (addressType === 'taproot') {
-      return baseSize + (numInputs * 57) + (numOutputs * 43);
-    } else if (addressType === 'segwit') {
-      return baseSize + (numInputs * 68) + (numOutputs * 31);
-    } else {
-      return baseSize + (numInputs * 148) + (numOutputs * 34);
-    }
+    return baseSize + (numInputs * 57) + (numOutputs * 43);
   }
 
-  private detectAddressType(address: string): 'segwit' | 'taproot' | 'legacy' {
-    if (!address) return 'legacy';
 
-    if (address.startsWith('bc1p') && address.length === 62) {
-      return 'taproot';
-    } else if (address.startsWith('bc1') && address.length === 42) {
-      return 'segwit';
-    } else {
-      return 'legacy';
-    }
-  }
 
   async loadRecommendedFee() {
     if (!this.wallet) return;
 
     this.isFeeManuallyChanged = false;
     this.loadingFee = true;
-
-    const addressType = this.wallet.addressType || this.detectAddressType(this.wallet.address);
 
     let estimatedInputs = 1;
     let estimatedOutputs = 2;
@@ -109,7 +91,7 @@ export class SendBitcoinPage implements OnInit {
       try {
         amountDecimal = new Decimal(this.amount);
       } catch {
-        this.loadRecommendedFeeFallback(addressType, estimatedInputs, 2);
+        this.loadRecommendedFeeFallback(estimatedInputs, 2);
         return;
       }
       
@@ -119,7 +101,7 @@ export class SendBitcoinPage implements OnInit {
         const totalBalanceSatoshis = confirmedUTXOs.reduce((sum, utxo) => sum + utxo.value, 0);
         const DUST_LIMIT = 546;
 
-        const sizeWith1Output = this.estimateTransactionSize(addressType, estimatedInputs, 1);
+        const sizeWith1Output = this.estimateTransactionSize(estimatedInputs, 1);
 
         const estimatedFeeForCheck = Math.ceil(3 * sizeWith1Output);
         const estimatedTotalNeeded = amountSatoshis + estimatedFeeForCheck + DUST_LIMIT;
@@ -134,7 +116,7 @@ export class SendBitcoinPage implements OnInit {
           Math.ceil((fees.economyFee + fees.hourFee) / 2)
         );
 
-        const estimatedVBytes = this.estimateTransactionSize(addressType, estimatedInputs, estimatedOutputs);
+        const estimatedVBytes = this.estimateTransactionSize(estimatedInputs, estimatedOutputs);
         const recommendedFee = Math.ceil(optimizedFeeRate * estimatedVBytes);
 
         this.baseNetworkFee = recommendedFee;
@@ -149,15 +131,15 @@ export class SendBitcoinPage implements OnInit {
           this.calculateAdjustedFee();
         }
       } else {
-        this.loadRecommendedFeeFallback(addressType, estimatedInputs, 2);
+        this.loadRecommendedFeeFallback(estimatedInputs, 2);
       }
     } else {
-      this.loadRecommendedFeeFallback(addressType, estimatedInputs, 2);
+      this.loadRecommendedFeeFallback(estimatedInputs, 2);
     }
   }
 
-  private async loadRecommendedFeeFallback(addressType: 'segwit' | 'taproot' | 'legacy', estimatedInputs: number, estimatedOutputs: number) {
-    const estimatedVBytes = this.estimateTransactionSize(addressType, estimatedInputs, estimatedOutputs);
+  private async loadRecommendedFeeFallback(estimatedInputs: number, estimatedOutputs: number) {
+    const estimatedVBytes = this.estimateTransactionSize(estimatedInputs, estimatedOutputs);
 
     let fees = await this.bitcoinApi.getRecommendedFees();
     
@@ -611,36 +593,6 @@ export class SendBitcoinPage implements OnInit {
       return amountDecimal.mul(price).toFixed(2);
     } catch (error) {
       return '0.00';
-    }
-  }
-
-  getAddressTypeLabel(): string {
-    if (!this.wallet) return '';
-
-    const addressType = this.wallet.addressType || this.detectAddressType(this.wallet.address);
-
-    switch (addressType) {
-      case 'taproot':
-        return 'Taproot (BIP86)';
-      case 'segwit':
-        return 'SegWit (BIP84)';
-      default:
-        return 'Legacy';
-    }
-  }
-
-  getAddressTypeDescription(): string {
-    if (!this.wallet) return '';
-
-    const addressType = this.wallet.addressType || this.detectAddressType(this.wallet.address);
-
-    switch (addressType) {
-      case 'taproot':
-        return 'Taxas otimizadas (~15-20% menores que SegWit).';
-      case 'segwit':
-        return 'Taxas reduzidas (~40% menores que Legacy).';
-      default:
-        return 'Taxas maiores. Considere migrar para SegWit ou Taproot.';
     }
   }
 }

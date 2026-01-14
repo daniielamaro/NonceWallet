@@ -14,13 +14,7 @@ export class StorageService {
     }
     
     try {
-      const wallets = JSON.parse(walletsJson);
-      return wallets.map((wallet: any) => {
-        if (!wallet.addressType) {
-          wallet.addressType = 'segwit';
-        }
-        return wallet;
-      });
+      return JSON.parse(walletsJson);
     } catch (error) {
       return [];
     }

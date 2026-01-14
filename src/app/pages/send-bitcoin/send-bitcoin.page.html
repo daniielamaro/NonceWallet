@@ -88,10 +88,6 @@
         <p class="fee-help-text" *ngIf="!loadingFee && !calculatingAdjustedFee && recommendedFeeRate && wallet && !isFeeAdjusted">
           <strong>Taxa recomendada:</strong> {{ recommendedFeeRate }} sat/vB ({{ baseNetworkFee }} satoshis base).
           <br>
-          <small>
-            <strong>{{ getAddressTypeLabel() }}:</strong> {{ getAddressTypeDescription() }}
-          </small>
-          <br>
           <small>Ajuste conforme necessário.</small>
         </p>
         <p class="fee-help-text" *ngIf="calculatingAdjustedFee">

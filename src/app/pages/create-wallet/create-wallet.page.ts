@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { WalletService } from '../../services/wallet.service';
 import { StorageService } from '../../services/storage.service';
@@ -10,15 +10,12 @@ import { AlertService } from '../../services/alert.service';
   styleUrls: ['./create-wallet.page.scss'],
   standalone: false,
 })
-export class CreateWalletPage {
+export class CreateWalletPage implements OnInit {
   mode: 'create' | 'import' = 'create';
-  createMode: 'generate' | 'custom' = 'generate';
   walletName: string = '';
   seedWords: string[] = Array(12).fill('');
   generatedSeed: string[] = [];
-  showSeed: boolean = false;
   seedInputText: string = '';
-  addressType: 'segwit' | 'taproot' = 'taproot';
   loading: boolean = false;
 
   constructor(
@@ -28,9 +25,14 @@ export class CreateWalletPage {
     private alertService: AlertService
   ) {}
 
+  ngOnInit() {
+    if (this.mode === 'create') {
+      this.generateNewSeed();
+    }
+  }
+
   generateNewSeed() {
     this.generatedSeed = this.walletService.generateSeed();
-    this.showSeed = true;
     this.seedWords = [...this.generatedSeed];
   }
 
@@ -51,26 +53,12 @@ export class CreateWalletPage {
       let seedToUse: string[] = [];
 
       if (this.mode === 'create') {
-        if (this.createMode === 'generate') {
-          if (this.generatedSeed.length === 0) {
-            await this.alertService.toastError('Por favor, gere um seed primeiro');
-            this.loading = false;
-            return;
-          }
-          seedToUse = this.generatedSeed;
-        } else {
-          seedToUse = this.getSeedArray();
-          if (seedToUse.length !== 12) {
-            await this.alertService.toastError('Por favor, insira todas as 12 palavras do seed');
-            this.loading = false;
-            return;
-          }
-          if (!this.walletService.validateSeed(seedToUse)) {
-            await this.alertService.error('Verifique se todas as palavras estão corretas e pertencem à lista BIP39.');
-            this.loading = false;
-            return;
-          }
+        if (this.generatedSeed.length === 0) {
+          await this.alertService.toastError('Por favor, gere um seed primeiro');
+          this.loading = false;
+          return;
         }
+        seedToUse = this.generatedSeed;
       } else {
         seedToUse = this.getSeedArray();
         if (seedToUse.length !== 12) {
@@ -86,7 +74,7 @@ export class CreateWalletPage {
       }
 
       try {
-        wallet = await this.walletService.generateWalletFromSeed(seedToUse, this.walletName, this.addressType);
+        wallet = await this.walletService.generateWalletFromSeed(seedToUse, this.walletName);
       } catch (genError: any) {
         throw new Error(`Erro ao gerar carteira: ${genError.message || 'Falha na geração da carteira. Verifique se o seed está correto.'}`);
       }
@@ -166,24 +154,12 @@ export class CreateWalletPage {
   }
 
   onModeChange() {
-    this.showSeed = false;
-    this.generatedSeed = [];
-    this.seedWords = Array(12).fill('');
-    this.seedInputText = '';
-    this.createMode = 'generate';
-    if (this.mode === 'import') {
-      this.addressType = 'segwit';
-    }
-  }
-
-  onCreateModeChange() {
-    if (this.createMode === 'generate') {
-      this.seedWords = Array(12).fill('');
-      this.seedInputText = '';
-      this.showSeed = false;
+    if (this.mode === 'create') {
+      this.generateNewSeed();
     } else {
       this.generatedSeed = [];
-      this.showSeed = false;
+      this.seedWords = Array(12).fill('');
+      this.seedInputText = '';
     }
   }
 

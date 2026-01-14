@@ -25,143 +25,34 @@
       </ion-item>
 
       <div *ngIf="mode === 'create'" class="address-type-section">
-        <ion-label class="address-type-label">Tipo de Endereço</ion-label>
-        <ion-segment [(ngModel)]="addressType" class="address-type-segment">
-          <ion-segment-button value="segwit">
-            <ion-label>SegWit (BIP84)</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="taproot">
-            <ion-label>Taproot (BIP86)</ion-label>
-          </ion-segment-button>
-        </ion-segment>
         <div class="address-type-info">
           <small>
-            <strong>SegWit (BIP84):</strong> Reduz taxas ~40% vs Legacy. Compatível com maioria das carteiras.<br>
-            <strong>Taproot (BIP86):</strong> Reduz taxas ~15-20% a mais que SegWit. Maior privacidade. Mais moderno. 
-            <em>Nota: Taproot também usa SegWit (witness), mas é mais eficiente.</em>
+            <strong>Taproot (BIP86):</strong> O padrão mais moderno e eficiente. Reduz taxas, oferece maior privacidade e é totalmente compatível com toda a rede Bitcoin. Você pode enviar Bitcoin para qualquer carteira (SegWit, Legacy, etc.).
           </small>
         </div>
       </div>
 
       <div *ngIf="mode === 'create'" class="seed-section">
-        <ion-segment [(ngModel)]="createMode" (ionChange)="onCreateModeChange()">
-          <ion-segment-button value="generate">
-            <ion-label>Gerar Seed</ion-label>
-          </ion-segment-button>
-          <ion-segment-button value="custom">
-            <ion-label>Inserir Seed</ion-label>
-          </ion-segment-button>
-        </ion-segment>
-
-        <div *ngIf="createMode === 'generate'">
-          <ion-button expand="block" (click)="generateNewSeed()" *ngIf="!showSeed" style="margin-top: 16px;">
-            Gerar Seed de 12 Palavras
+        <div class="seed-display">
+          <h3>Seu Seed (Guarde em Local Seguro!)</h3>
+          <div class="seed-words">
+            <div class="seed-word" *ngFor="let word of generatedSeed; let i = index">
+              {{ i + 1 }}. {{ word }}
+            </div>
+          </div>
+          <ion-button expand="block" fill="outline" (click)="copySeed()">
+            <ion-icon name="copy-outline" slot="start"></ion-icon>
+            Copiar Seed
           </ion-button>
-
-          <div *ngIf="showSeed" class="seed-display">
-            <h3>Seu Seed (Guarde em Local Seguro!)</h3>
-            <div class="seed-words">
-              <div class="seed-word" *ngFor="let word of generatedSeed; let i = index">
-                {{ i + 1 }}. {{ word }}
-              </div>
-            </div>
-            <ion-button expand="block" fill="outline" (click)="copySeed()">
-              <ion-icon name="copy-outline" slot="start"></ion-icon>
-              Copiar Seed
-            </ion-button>
-            <p class="warning">⚠️ Nunca compartilhe seu seed com ninguém!</p>
-          </div>
-        </div>
-
-        <div *ngIf="createMode === 'custom'">
-          <div class="seed-input-header" style="margin-top: 16px;">
-            <h3>Digite seu seed de 12 palavras</h3>
-            <div class="seed-progress">
-              <span class="progress-text">{{ getFilledWordsCount() }}/12 palavras</span>
-              <ion-icon 
-                *ngIf="isSeedComplete()" 
-                name="checkmark-circle" 
-                color="success"
-                class="valid-icon">
-              </ion-icon>
-            </div>
-          </div>
-
-          <div class="paste-seed-section">
-            <ion-item>
-              <ion-label position="stacked">Ou cole o seed completo aqui</ion-label>
-              <ion-textarea 
-                [(ngModel)]="seedInputText" 
-                (ionInput)="onSeedInputPaste()"
-                placeholder="cole as 12 palavras separadas por espaço"
-                rows="2"
-                class="seed-paste-input">
-              </ion-textarea>
-            </ion-item>
-            <ion-button 
-              fill="clear" 
-              size="small" 
-              (click)="clearSeedInput()"
-              *ngIf="hasSeedInput()">
-              Limpar
-            </ion-button>
-          </div>
-
-          <div class="seed-input-grid">
-            <div 
-              *ngFor="let word of seedWords; let i = index; trackBy: trackByIndex" 
-              class="seed-word-item"
-              [class.valid]="isWordValid(seedWords[i])"
-              [class.invalid]="seedWords[i] && !isWordValid(seedWords[i])">
-              <div class="word-number">{{ i + 1 }}</div>
-              <ion-input 
-                [ngModel]="seedWords[i]" 
-                (ngModelChange)="seedWords[i] = $event.toLowerCase().trim()"
-                (ionBlur)="seedWords[i] = seedWords[i].trim()"
-                placeholder="Palavra {{ i + 1 }}"
-                [name]="'create-seed-word-' + i"
-                autocomplete="off"
-                autocapitalize="off"
-                spellcheck="false"
-                class="seed-word-input">
-              </ion-input>
-              <ion-icon 
-                *ngIf="isWordValid(seedWords[i])" 
-                name="checkmark-circle" 
-                color="success"
-                class="word-valid-icon">
-              </ion-icon>
-              <ion-icon 
-                *ngIf="seedWords[i] && !isWordValid(seedWords[i])" 
-                name="close-circle" 
-                color="danger"
-                class="word-invalid-icon">
-              </ion-icon>
-            </div>
-          </div>
-
-          <div class="seed-help">
-            <p><strong>Dica:</strong> Você pode colar o seed completo no campo acima ou digitar palavra por palavra nos campos abaixo.</p>
-          </div>
+          <p class="warning">⚠️ Nunca compartilhe seu seed com ninguém!</p>
         </div>
       </div>
 
       <div *ngIf="mode === 'import'" class="import-section">
         <div class="address-type-section" style="margin-bottom: 20px;">
-          <ion-label class="address-type-label">Tipo de Endereço da Carteira Original</ion-label>
-          <ion-segment [(ngModel)]="addressType" class="address-type-segment">
-            <ion-segment-button value="segwit">
-              <ion-label>SegWit (BIP84)</ion-label>
-            </ion-segment-button>
-            <ion-segment-button value="taproot">
-              <ion-label>Taproot (BIP86)</ion-label>
-            </ion-segment-button>
-          </ion-segment>
           <div class="address-type-info">
             <small>
-              <strong>Importante:</strong> Selecione o mesmo tipo de endereço usado na carteira original.<br>
-              <strong>SegWit (BIP84):</strong> Usado pela maioria das carteiras (BlueWallet, Electrum, etc.)<br>
-              <strong>Taproot (BIP86):</strong> Carteiras mais modernas. Se não tiver certeza, tente SegWit primeiro.
+              <strong>Importante:</strong> Esta carteira suporta apenas Taproot (BIP86). Se sua carteira original usa SegWit (BIP84), você precisará usar outra carteira para importá-la.
             </small>
           </div>
         </div>

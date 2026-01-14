@@ -6,7 +6,7 @@ import * as ecc from 'tiny-secp256k1';
 import { Buffer } from 'buffer';
 import * as bip39 from 'bip39';
 import { BIP32Factory } from 'bip32';
-import { AddressType, Wallet } from '../domain/wallet';
+import { Wallet } from '../domain/wallet';
 
 @Injectable({
   providedIn: 'root'
@@ -25,7 +25,7 @@ export class WalletService {
     return mnemonic.split(' ');
   }
 
-  async generateWalletFromSeed(seed: string[], name: string, addressType: AddressType = 'taproot'): Promise<Wallet> {
+  async generateWalletFromSeed(seed: string[], name: string): Promise<Wallet> {
     try {
       const mnemonic = seed.join(' ');
 
@@ -36,12 +36,7 @@ export class WalletService {
       const seedBuffer = await bip39.mnemonicToSeed(mnemonic);
       
       const root = this.bip32.fromSeed(seedBuffer, this.network);
-      let path: string;
-      if (addressType === 'segwit') {
-        path = "m/84'/0'/0'/0/0"; // BIP84 - SegWit
-      } else {
-        path = "m/86'/0'/0'/0/0"; // BIP86 - Taproot
-      }
+      const path = "m/86'/0'/0'/0/0"; // BIP86 - Taproot
       const child = root.derivePath(path);
 
       if (!child.privateKey) {
@@ -50,7 +45,7 @@ export class WalletService {
 
       const privateKeyHex = Buffer.from(child.privateKey).toString('hex');
 
-      const address = await this.generateAddressFromPrivateKey(privateKeyHex, addressType);
+      const address = await this.generateAddressFromPrivateKey(privateKeyHex);
 
       const wallet = {
         id: this.generateId(),
@@ -58,7 +53,6 @@ export class WalletService {
         address,
         privateKey: privateKeyHex,
         seed,
-        addressType,
         createdAt: Date.now()
       };
 
@@ -69,7 +63,7 @@ export class WalletService {
     }
   }
 
-  async generateWalletFromPrivateKey(privateKey: string, name: string, addressType: AddressType = 'taproot'): Promise<Wallet> {
+  async generateWalletFromPrivateKey(privateKey: string, name: string): Promise<Wallet> {
     let normalizedKey = privateKey.trim().replace(/^0x/i, '').replace(/\s/g, '');
 
     if (normalizedKey.length < 64) {
@@ -78,7 +72,7 @@ export class WalletService {
       normalizedKey = normalizedKey.substring(0, 64);
     }
 
-    const address = await this.generateAddressFromPrivateKey(normalizedKey, addressType);
+    const address = await this.generateAddressFromPrivateKey(normalizedKey);
 
     return {
       id: this.generateId(),
@@ -86,12 +80,11 @@ export class WalletService {
       address,
       privateKey: normalizedKey,
       seed: [],
-      addressType,
       createdAt: Date.now()
     };
   }
 
-  private async generateAddressFromPrivateKey(privateKey: string, addressType: AddressType = 'taproot'): Promise<string> {
+  private async generateAddressFromPrivateKey(privateKey: string): Promise<string> {
     try {
       const privateKeyBuffer = Buffer.from(privateKey, 'hex');
 
@@ -101,40 +94,30 @@ export class WalletService {
 
       const keyPair = this.ECPair.fromPrivateKey(privateKeyBuffer, { network: this.network });
 
-      let address: string | undefined;
+      const xOnlyPubkey = keyPair.publicKey.slice(1, 33);
 
-      if (addressType === 'taproot') {
-        const xOnlyPubkey = keyPair.publicKey.slice(1, 33);
-
-        if (xOnlyPubkey.length !== 32) {
-          throw new Error(`Chave pública X-only inválida: esperado 32 bytes, obtido ${xOnlyPubkey.length} bytes`);
-        }
-
-        const { address: taprootAddress } = bitcoin.payments.p2tr({
-          internalPubkey: xOnlyPubkey,
-          network: this.network
-        });
-
-        if (!taprootAddress) {
-          throw new Error('Falha ao gerar endereço Taproot: endereço é nulo');
-        }
-
-        if (!taprootAddress.startsWith('bc1p')) {
-          throw new Error(`Endereço Taproot inválido: deve começar com "bc1p", mas começa com "${taprootAddress.substring(0, 4)}"`);
-        }
-
-        if (taprootAddress.length !== 62) {
-          throw new Error(`Endereço Taproot inválido: deve ter 62 caracteres, mas tem ${taprootAddress.length} caracteres. Endereço: ${taprootAddress}`);
-        }
-
-        address = taprootAddress;
-      } else {
-        const { address: segwitAddress } = bitcoin.payments.p2wpkh({
-          pubkey: keyPair.publicKey,
-          network: this.network
-        });
-        address = segwitAddress;
+      if (xOnlyPubkey.length !== 32) {
+        throw new Error(`Chave pública X-only inválida: esperado 32 bytes, obtido ${xOnlyPubkey.length} bytes`);
       }
+
+      const { address: taprootAddress } = bitcoin.payments.p2tr({
+        internalPubkey: xOnlyPubkey,
+        network: this.network
+      });
+
+      if (!taprootAddress) {
+        throw new Error('Falha ao gerar endereço Taproot: endereço é nulo');
+      }
+
+      if (!taprootAddress.startsWith('bc1p')) {
+        throw new Error(`Endereço Taproot inválido: deve começar com "bc1p", mas começa com "${taprootAddress.substring(0, 4)}"`);
+      }
+
+      if (taprootAddress.length !== 62) {
+        throw new Error(`Endereço Taproot inválido: deve ter 62 caracteres, mas tem ${taprootAddress.length} caracteres. Endereço: ${taprootAddress}`);
+      }
+
+      const address = taprootAddress;
 
       if (!address) {
         throw new Error('Falha ao gerar endereço Bitcoin');

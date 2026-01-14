@@ -236,9 +236,7 @@ export class TransactionService {
 
       const keyPair = this.ECPair.fromPrivateKey(privateKeyBuffer, { network: this.network });
 
-      const isSegWit = senderAddress.startsWith('bc1') && senderAddress.length === 42;
       const isTaproot = senderAddress.startsWith('bc1p') && senderAddress.length === 62;
-      const isLegacy = !isSegWit && !isTaproot;
 
       if (isTaproot) {
         if (senderAddress.length !== 62) {
@@ -311,24 +309,13 @@ export class TransactionService {
           sequence: 0xFFFFFFFD
         };
 
-        if (isSegWit || isTaproot) {
-          inputData.witnessUtxo = {
-            script: scriptPubKey,
-            value: BigInt(input.value)
-          };
-          if (isTaproot && taprootPayment) {
-            if (taprootPayment.internalPubkey) {
-              inputData.tapInternalKey = taprootPayment.internalPubkey;
-            }
-          }
-        } else {
-          if (input.txHex) {
-            inputData.nonWitnessUtxo = Buffer.from(input.txHex, 'hex');
-          } else {
-            inputData.witnessUtxo = {
-              script: scriptPubKey,
-              value: BigInt(input.value)
-            };
+        inputData.witnessUtxo = {
+          script: scriptPubKey,
+          value: BigInt(input.value)
+        };
+        if (isTaproot && taprootPayment) {
+          if (taprootPayment.internalPubkey) {
+            inputData.tapInternalKey = taprootPayment.internalPubkey;
           }
         }
 
@@ -382,12 +369,11 @@ export class TransactionService {
       }
 
       for (let i = 0; i < inputs.length; i++) {
-        if (isTaproot) {
-          const tweakedSigner = this.tweakSigner(keyPair, { network: this.network });
-          psbt.signTaprootInput(i, tweakedSigner);
-        } else {
-          psbt.signInput(i, keyPair);
+        if (!isTaproot) {
+          throw new Error('Esta carteira suporta apenas endereços Taproot');
         }
+        const tweakedSigner = this.tweakSigner(keyPair, { network: this.network });
+        psbt.signTaprootInput(i, tweakedSigner);
       }
 
       psbt.finalizeAllInputs();

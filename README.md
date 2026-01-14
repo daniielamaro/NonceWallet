@@ -1,6 +1,6 @@
 # 🪙 Nonce Wallet
 
-Uma carteira Bitcoin moderna e segura desenvolvida com Angular e Ionic, oferecendo suporte completo para endereços SegWit (BIP84) e Taproot (BIP86), a versão mais atualizada e eficiente da rede Bitcoin.
+Uma carteira Bitcoin moderna e segura desenvolvida com Angular e Ionic, oferecendo suporte completo para endereços Taproot (BIP86), a versão mais atualizada e eficiente da rede Bitcoin.
 
 ## 📋 Sobre o Projeto
 
@@ -10,10 +10,8 @@ O **Nonce Wallet** é uma aplicação de carteira Bitcoin que permite aos usuár
 
 - **Criação de Carteiras**: Gere novas carteiras Bitcoin com seed de 12 palavras (BIP39)
 - **Importação de Carteiras**: Importe carteiras existentes de outras aplicações usando seed phrase
-- **Compatibilidade Total com Outras Carteiras**: Suporte completo a padrões BIP39, BIP32, BIP44, BIP84 e BIP86
-- **Suporte a Múltiplos Tipos de Endereço**:
-  - **SegWit (BIP84)**: Reduz taxas em ~40% comparado a endereços Legacy
-  - **Taproot (BIP86)**: Versão mais moderna, reduz taxas em ~15-20% a mais que SegWit, oferece maior privacidade e eficiência
+- **Compatibilidade Total com Outras Carteiras**: Suporte completo a padrões BIP39, BIP32, BIP44 e BIP86
+- **Taproot (BIP86)**: Padrão mais moderno e eficiente, reduz taxas significativamente, oferece maior privacidade e permite enviar Bitcoin para qualquer tipo de endereço (SegWit, Legacy, etc.)
 - **Envio de Bitcoin**: Envie Bitcoin para qualquer endereço com cálculo automático de taxas
 - **Recebimento de Bitcoin**: Gere endereços QR Code para receber pagamentos
 - **Histórico de Transações**: Visualize todas as transações da carteira
@@ -26,9 +24,10 @@ O **Nonce Wallet** é uma aplicação de carteira Bitcoin que permite aos usuár
 
 ### Vantagens do Taproot:
 
-- **Taxas Mais Baixas**: Reduz as taxas de transação em aproximadamente 15-20% a mais que SegWit
+- **Taxas Mais Baixas**: Reduz as taxas de transação significativamente comparado a outros tipos de endereço
 - **Maior Privacidade**: Transações Taproot são indistinguíveis de outras transações Taproot na blockchain
 - **Maior Eficiência**: Transações mais leves e rápidas
+- **Compatibilidade Total**: Você pode enviar Bitcoin para qualquer tipo de endereço (SegWit, Legacy, Taproot, etc.)
 - **Futuro do Bitcoin**: Padrão recomendado para novas carteiras e transações
 
 ### Comparação de Tipos de Endereço:
@@ -39,7 +38,7 @@ O **Nonce Wallet** é uma aplicação de carteira Bitcoin que permite aos usuár
 | **SegWit (BIP84)** | `bc1...` (42 chars) | ~60% | Média | Alta |
 | **Taproot (BIP86)** | `bc1p...` (62 chars) | ~45-50% | Alta | Crescendo |
 
-**Recomendação**: Use Taproot para novas carteiras, pois oferece o melhor custo-benefício e está alinhado com o futuro do Bitcoin.
+**Nota**: Esta carteira suporta apenas Taproot (BIP86), que é o padrão mais moderno e eficiente.
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -151,7 +150,6 @@ private network = bitcoin.networks.bitcoin   // Para mainnet (padrão)
   - Compatível com todas as carteiras que seguem o padrão BIP39
 - **BIP32 (HD Wallets)**: Derivação hierárquica determinística de chaves
 - **BIP44**: Suporte a caminhos de derivação padrão para Bitcoin
-- **BIP84 (SegWit)**: Endereços `bc1...` (42 caracteres) - caminho `m/84'/0'/0'/0/0`
 - **BIP86 (Taproot)**: Endereços `bc1p...` (62 caracteres) - caminho `m/86'/0'/0'/0/0`
 
 ### Transações
@@ -159,7 +157,7 @@ private network = bitcoin.networks.bitcoin   // Para mainnet (padrão)
 - **UTXO Selection**: Seleção automática de UTXOs para transações
 - **Cálculo de Taxas**: Cálculo dinâmico baseado na rede
 - **PSBT (Partially Signed Bitcoin Transactions)**: Construção segura de transações
-- **Witness Data**: Suporte completo para SegWit e Taproot witness
+- **Witness Data**: Suporte completo para Taproot witness
 
 ### Segurança
 
@@ -172,32 +170,28 @@ private network = bitcoin.networks.bitcoin   // Para mainnet (padrão)
 
 O **Nonce Wallet** implementa os padrões Bitcoin mais amplamente adotados, garantindo total compatibilidade com outras carteiras populares.
 
-### ✅ Carteiras Compatíveis
+### ✅ Compatibilidade
 
-Você pode importar seeds de (e exportar para) as seguintes carteiras:
+**Importação**: Você pode importar seeds de carteiras Taproot (BIP86) que seguem o padrão BIP39.
 
-- **BlueWallet** ✅ (SegWit - BIP84)
-- **Electrum** ✅ (SegWit - BIP84)
-- **Exodus** ✅ (SegWit/Taproot)
-- **Trust Wallet** ✅ (SegWit - BIP84)
-- **Coinbase Wallet** ✅ (SegWit - BIP84)
-- **Qualquer carteira BIP39** ✅
+**Envio**: Carteiras Taproot podem enviar Bitcoin para qualquer tipo de endereço, incluindo:
+- Carteiras SegWit (BIP84) como BlueWallet, Electrum, Trust Wallet, Coinbase Wallet
+- Carteiras Legacy
+- Outras carteiras Taproot
+- Qualquer endereço Bitcoin válido
 
 ### 📋 Como Importar uma Carteira
 
 1. **Obtenha sua seed phrase** (12 palavras) da carteira original
 2. **No Nonce Wallet**, vá em "Importar Carteira"
-3. **Selecione o tipo de endereço correto**:
-   - **SegWit (BIP84)**: Para a maioria das carteiras (BlueWallet, Electrum, etc.)
-   - **Taproot (BIP86)**: Para carteiras mais modernas
-4. **Digite ou cole as 12 palavras do seed**
+3. **Importante**: Esta carteira suporta apenas Taproot (BIP86). Se sua carteira original usa SegWit (BIP84), você precisará usar outra carteira para importá-la
+4. **Digite ou cole as 12 palavras do seed** (deve ser uma carteira Taproot)
 5. **Importe e acesse seus fundos**
 
 ### ⚠️ Importante na Importação
 
-- **Selecione o tipo de endereço correto**: O tipo de endereço (SegWit ou Taproot) determina o caminho de derivação usado. Se você selecionar o tipo errado, gerará um endereço diferente e não verá seus fundos.
-- **BlueWallet e maioria das carteiras**: Usam **SegWit (BIP84)** por padrão
-- **Se não tiver certeza**: Tente **SegWit (BIP84)** primeiro, pois é o mais comum
+- **Esta carteira suporta apenas Taproot (BIP86)**: Se sua carteira original usa SegWit (BIP84), você não poderá importá-la diretamente
+- **Carteiras Taproot podem enviar para qualquer endereço**: Mesmo que você tenha uma carteira Taproot, você pode enviar Bitcoin para carteiras SegWit, Legacy ou qualquer outro tipo de endereço
 
 ### 🔐 Padrões Implementados
 
@@ -206,7 +200,6 @@ Você pode importar seeds de (e exportar para) as seguintes carteiras:
 | **BIP39** | ✅ Completo | Mnemônicos e derivação de seeds |
 | **BIP32** | ✅ Implementado | HD Wallets (carteiras hierárquicas) |
 | **BIP44** | ✅ Suportado | Caminhos de derivação padrão |
-| **BIP84** | ✅ Completo | SegWit Native (endereços `bc1...`) |
 | **BIP86** | ✅ Completo | Taproot (endereços `bc1p...`) |
 | **BIP174** | ✅ Completo | PSBT (transações parcialmente assinadas) |
 
@@ -272,7 +265,6 @@ Este projeto está sob a licença especificada no arquivo `LICENSE`.
 - [BIP32 - HD Wallets](https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki)
 - [BIP39 - Mnemonic Code](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
 - [BIP44 - Multi-Account Hierarchy](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
-- [BIP84 - SegWit](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki)
 - [BIP86 - Taproot](https://github.com/bitcoin/bips/blob/master/bip-0086.mediawiki)
 - [BIP174 - PSBT](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
 
